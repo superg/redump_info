@@ -1,8 +1,10 @@
 set(includes
+	${BOOST_INCLUDES}
 #	"${PROJECT_SOURCE_DIR}/utils"
 )
 
 set(libs
+	${BOOST_LIBS}
 #	"utils"
 )
 

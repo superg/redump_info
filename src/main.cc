@@ -278,41 +278,14 @@ void process(const filesystem::path &image_path)
 
 int main(int argc, char *argv[])
 {
-	int exit_code(0);
-
-	try
-	{
-        gpsxre::Version version(argv[0]);
-		cerr << version << endl;
-
-		if(argc != 2)
-			throw runtime_error("usage: " + version.BaseName() + " <PSX CD image>");
-
-		gpsxre::process(argv[1]);
-	}
-    catch(const string &s)
-    {
-        cerr << s << endl;
-        exit_code = 1;
-    }
-    catch(const exception &e)
-    {
-        cerr << e.what() << endl;
-        exit_code = 2;
-    }
-	catch(...)
-	{
-		cerr << "unhandled exception" << endl;
-		exit_code = 3;
-	}
-
-	return exit_code;
 }
 */
 
 
 
 #include <iostream>
+#include <string>
+#include <boost/program_options.hpp>
 
 
 
@@ -320,9 +293,102 @@ using namespace std;
 
 
 
+namespace po = boost::program_options;
+
+
+
+#define xstr(arg_) str(arg_)
+#define str(arg_) #arg_
+void print_version()
+{
+    cout << "redump_info v" << RI_VERSION_MAJOR << "." << RI_VERSION_MINOR << " (" << xstr(RI_TIMESTAMP) << ")" << endl;
+}
+
+
 int main(int argc, const char *argv[])
 {
+    /*
     cout << "test" << endl;
-    
-    return 0;
+
+    try {
+
+        po::options_description desc("Allowed options");
+        desc.add_options()
+            ("help", "produce help message")
+            ("compression", po::value<double>(), "set compression level");
+
+        po::variables_map vm;
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+
+        if (vm.count("help")) {
+            cout << desc << "\n";
+            return 0;
+        }
+
+        if (vm.count("compression")) {
+            cout << "Compression level was set to "
+                << vm["compression"].as<double>() << ".\n";
+        } else {
+            cout << "Compression level was not set.\n";
+        }
+    }
+    catch(exception& e) {
+        cerr << "error: " << e.what() << "\n";
+        return 1;
+    }
+    catch(...) {
+        cerr << "Exception of unknown type!\n";
+        return 1;
+    }
+
+    */
+    int exit_code(0);
+
+    try
+    {
+        print_version();
+
+        po::options_description options("options");
+        options.add_options()
+            ("help,h", "this help message")
+            ("verbose,V", "verbose output")
+            ("command,c", po::value<string>(), "info|submission")
+            ("input-file", po::value<vector<string>>(), "input file")
+            ;
+        po::positional_options_description positional_options;
+        positional_options.add("input-file", -1);
+
+        po::variables_map vm;
+        po::store(po::command_line_parser(argc, argv).options(options).positional(positional_options).run(), vm);
+        po::notify(vm);
+
+        // show usage
+        if(vm.count("help"))
+        {
+            cout << options << endl;
+        }
+        else
+        {
+            ;
+        }
+
+        cout << "test" << endl;
+//        if(argc != 2)
+//            throw runtime_error("usage: " + version.BaseName() + " <PSX CD image>");
+
+//        gpsxre::process(argv[1]);
+    }
+    catch(const exception &e)
+    {
+        cerr << "error: " << e.what() << endl;
+        exit_code = 1;
+    }
+    catch(...)
+    {
+        cerr << "error: unhandled exception" << endl;
+        exit_code = 2;
+    }
+
+    return exit_code;
 }
