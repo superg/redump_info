@@ -283,101 +283,60 @@ int main(int argc, char *argv[])
 
 
 
+#include <cstdint>
 #include <iostream>
 #include <string>
-#include <boost/program_options.hpp>
+#include <list>
+#include "options.hh"
 
 
 
 using namespace std;
+using namespace redump_info;
 
 
 
-namespace po = boost::program_options;
-
-
-
-#define xstr(arg_) str(arg_)
-#define str(arg_) #arg_
-void print_version()
+int main(int argc, char *argv[])
 {
-    cout << "redump_info v" << RI_VERSION_MAJOR << "." << RI_VERSION_MINOR << " (" << xstr(RI_TIMESTAMP) << ")" << endl;
-}
-
-
-int main(int argc, const char *argv[])
-{
-    /*
-    cout << "test" << endl;
-
-    try {
-
-        po::options_description desc("Allowed options");
-        desc.add_options()
-            ("help", "produce help message")
-            ("compression", po::value<double>(), "set compression level");
-
-        po::variables_map vm;
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);
-
-        if (vm.count("help")) {
-            cout << desc << "\n";
-            return 0;
-        }
-
-        if (vm.count("compression")) {
-            cout << "Compression level was set to "
-                << vm["compression"].as<double>() << ".\n";
-        } else {
-            cout << "Compression level was not set.\n";
-        }
-    }
-    catch(exception& e) {
-        cerr << "error: " << e.what() << "\n";
-        return 1;
-    }
-    catch(...) {
-        cerr << "Exception of unknown type!\n";
-        return 1;
-    }
-
-    */
     int exit_code(0);
 
     try
     {
-        print_version();
+        Options options(argc, const_cast<const char **>(argv));
+        options.PrintVersion(cout);
 
-        po::options_description options("options");
-        options.add_options()
-            ("help,h", "this help message")
-            ("verbose,V", "verbose output")
-            ("command,c", po::value<string>(), "info|submission")
-            ("input-file", po::value<vector<string>>(), "input file")
-            ;
-        po::positional_options_description positional_options;
-        positional_options.add("input-file", -1);
-
-        po::variables_map vm;
-        po::store(po::command_line_parser(argc, argv).options(options).positional(positional_options).run(), vm);
-        po::notify(vm);
-
-        // show usage
-        if(vm.count("help"))
+        // print usage
+        if(options.help)
         {
-            cout << options << endl;
+            options.PrintUsage(cout);
         }
         else
         {
-            ;
+            if(options.positional.empty())
+                throw runtime_error("no path specified");
+
+            if(options.mode == Options::Mode::INFO)
+            {
+                // if no individual info options specified enable all
+                bool enable_all = true;
+                for(uint32_t i = 0; i < sizeof(options.info) / sizeof(options.info[0]); ++i)
+                {
+                    if(options.info[i])
+                    {
+                        enable_all = false;
+                        break;
+                    }
+                }
+
+                if(enable_all)
+                    for(uint32_t i = 0; i < sizeof(options.info) / sizeof(options.info[0]); ++i)
+                        options.info[i] = true;
+            }
+            else
+            {
+                throw runtime_error("mode not implemented");
+            }
         }
-
-        cout << "test" << endl;
-//        if(argc != 2)
-//            throw runtime_error("usage: " + version.BaseName() + " <PSX CD image>");
-
-//        gpsxre::process(argv[1]);
     }
     catch(const exception &e)
     {
