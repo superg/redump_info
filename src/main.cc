@@ -284,10 +284,14 @@ int main(int argc, char *argv[])
 
 
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <list>
+#include "common.hh"
+#include "info.hh"
 #include "options.hh"
+#include "strings.hh"
 
 
 
@@ -313,13 +317,16 @@ int main(int argc, char *argv[])
         else
         {
             if(options.positional.empty())
-                throw runtime_error("no path specified");
+                throw_line("no path specified");
 
             if(options.mode == Options::Mode::INFO)
             {
+                // lowercase extension and prepend with dot
+                options.extension = "." + str_lowercase(options.extension);
+
                 // if no individual info options specified enable all
                 bool enable_all = true;
-                for(uint32_t i = 0; i < sizeof(options.info) / sizeof(options.info[0]); ++i)
+                for(uint32_t i = 0; i < dim(options.info); ++i)
                 {
                     if(options.info[i])
                     {
@@ -329,12 +336,42 @@ int main(int argc, char *argv[])
                 }
 
                 if(enable_all)
-                    for(uint32_t i = 0; i < sizeof(options.info) / sizeof(options.info[0]); ++i)
+                    for(uint32_t i = 0; i < dim(options.info); ++i)
                         options.info[i] = true;
+
+                for(auto const &p : options.positional)
+                {
+                    if(!filesystem::exists(p))
+                        throw_line("path doesn't exist [" + p + "]");
+
+                    // one file
+                    if(filesystem::is_regular_file(p))
+                    {
+                        info(options, p);
+                    }
+                    // recurse directory
+                    else if(filesystem::is_directory(p))
+                    {
+                        for(auto const &it : filesystem::recursive_directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+                        {
+                            // skip anything other than regular file
+                            if(!it.is_regular_file())
+                                continue;
+
+                            // silently filter by extension
+                            if(str_lowercase(it.path().extension().generic_string()) != options.extension)
+                                continue;
+
+                            info(options, it.path());
+                        }
+                    }
+                    else
+                        throw_line("path is not regular file or directory [" + p + "]");
+                }
             }
             else
             {
-                throw runtime_error("mode not implemented");
+                throw_line("mode not implemented [" + options.ModeString() + "]");
             }
         }
     }

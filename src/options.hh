@@ -25,6 +25,7 @@ struct Options
     Mode mode;
     bool help;
     bool verbose;
+    std::string extension;
 
     std::list<std::string> positional;
 
@@ -32,16 +33,20 @@ struct Options
     {
         struct
         {
+            bool start_msf;
             bool sector_size;
             bool edc;
+            bool launcher;
             bool serial;
             bool system_area;
         };
-        bool info[4];
+        bool info[6];
     };
 
     Options();
     Options(int argc, const char *argv[]);
+
+    std::string ModeString();
 
     void PrintVersion(std::ostream &os);
     void PrintUsage(std::ostream &os);

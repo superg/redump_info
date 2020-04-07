@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include "common.hh"
 #include "options.hh"
 
 
@@ -17,8 +18,9 @@ Options::Options()
     , mode(Mode::INFO)
     , help(false)
     , verbose(false)
+    , extension("bin")
 {
-    for(uint32_t i = 0; i < sizeof(info) / sizeof(info[0]); ++i)
+    for(uint32_t i = 0; i < dim(info); ++i)
         info[i] = false;
 }
 
@@ -36,30 +38,56 @@ Options::Options(int argc, const char *argv[])
     if(found != std::string::npos)
         basename = basename.substr(0, found);
 
+    std::string *o_value = nullptr;
     for(int i = 1; i < argc; ++i)
     {
         auto o(argv[i]);
         switch(o[0])
         {
-            // option
+        // option
         case '-':
         {
-            std::string key(o);
-            if(key == "--help" || key == "-h")
-                help = true;
-            else if(key == "--verbose" || key == "-V")
-                verbose = true;
-            // unknown option
-            else
+            if(o_value == nullptr)
             {
-                throw std::runtime_error("unknown option " + key);
+                std::string key(o);
+                if(key == "--help" || key == "-h")
+                    help = true;
+                else if(key == "--verbose" || key == "-V")
+                    verbose = true;
+                else if(key == "--extension" || key == "-e")
+                    o_value = &extension;
+                else if(key == "--start-msf")
+                    start_msf = true;
+                else if(key == "--sector-size")
+                    sector_size = true;
+                else if(key == "--edc")
+                    edc = true;
+                else if(key == "--serial")
+                    serial = true;
+                else if(key == "--launcher")
+                    launcher = true;
+                else if(key == "--system-area")
+                    system_area = true;
+                // unknown option
+                else
+                {
+                    throw_line("unknown option [" + key + "]");
+                }
             }
+            else
+                throw_line("parse error, expected option value [" + argv[i - 1] + "]");
         }
         break;
 
         // positional
         default:
-            positional.emplace_back(o);
+            if(o_value != nullptr)
+            {
+                *o_value = o;
+                o_value = nullptr;
+            }
+            else
+                positional.emplace_back(o);
         }
     }
 
@@ -76,11 +104,21 @@ Options::Options(int argc, const char *argv[])
 }
 
 
-#define xstr(arg_) str(arg_)
-#define str(arg_) #arg_
+std::string Options::ModeString()
+{
+    std::string mode_string;
+
+    for(auto const &m : MODES)
+        if(m.second == mode)
+            return m.first;
+
+    throw_line("mode not found");
+}
+
+
 void Options::PrintVersion(std::ostream &os)
 {
-    os << basename << " v" << RI_VERSION_MAJOR << "." << RI_VERSION_MINOR << " (" << xstr(RI_TIMESTAMP) << ")" << std::endl;
+    os << basename << " v" << RI_VERSION_MAJOR << "." << RI_VERSION_MINOR << " (" << XSTR(RI_TIMESTAMP) << ")" << std::endl;
     os << std::endl;
 }
 
@@ -97,6 +135,7 @@ void Options::PrintUsage(std::ostream &os)
     os << "options: " << std::endl;
     os << "\t--help,-h\tprint help message" << std::endl;
     os << "\t--verbose,-V\tverbose output" << std::endl;
+    os << "\t--extension,-e\tdefault CD image extension" << std::endl;
 }
 
 }
