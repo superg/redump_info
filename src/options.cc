@@ -7,9 +7,10 @@
 namespace redump_info
 {
 
-const std::unordered_map<std::string, Options::Mode> Options::MODES =
+const std::unordered_map<std::string, Options::Mode> Options::_MODES =
 {
-    {"info", Mode::INFO}
+    {"info", Mode::INFO},
+    {"submission", Mode::SUBMISSION}
 };
 
 
@@ -56,6 +57,7 @@ Options::Options(int argc, const char *argv[])
                     verbose = true;
                 else if(key == "--extension" || key == "-e")
                     o_value = &extension;
+                // info
                 else if(key == "--start-msf")
                     start_msf = true;
                 else if(key == "--sector-size")
@@ -68,6 +70,10 @@ Options::Options(int argc, const char *argv[])
                     launcher = true;
                 else if(key == "--system-area")
                     system_area = true;
+
+                // submission
+                else if(key == "--dat-file")
+                    o_value = &dat_path;
                 // unknown option
                 else
                 {
@@ -94,8 +100,8 @@ Options::Options(int argc, const char *argv[])
     // parse positional mode
     if(positional.size() > 1)
     {
-        auto it = MODES.find(positional.front());
-        if(it != MODES.end())
+        auto it = _MODES.find(positional.front());
+        if(it != _MODES.end())
         {
             mode = it->second;
             positional.pop_front();
@@ -108,7 +114,7 @@ std::string Options::ModeString()
 {
     std::string mode_string;
 
-    for(auto const &m : MODES)
+    for(auto const &m : _MODES)
         if(m.second == mode)
             return m.first;
 

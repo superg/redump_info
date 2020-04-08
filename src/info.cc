@@ -5,8 +5,9 @@
 #include <sstream>
 #include "common.hh"
 #include "image_browser.hh"
-#include "info.hh"
+#include "psx.hh"
 #include "strings.hh"
+#include "info.hh"
 
 
 
@@ -79,64 +80,14 @@ bool mode2form2_edc_fast(const std::filesystem::path &f)
 }
 
 
-string launcher_executable(ImageBrowser &browser)
-{
-	string launcher("PSX.EXE");
-
-	auto system_cnf = browser.RootDirectory()->SubEntry("SYSTEM.CNF");
-	if(system_cnf)
-	{
-		auto data = system_cnf->Read();
-		string data_str(data.begin(), data.end());
-		stringstream ss(data_str);
-
-		string line;
-		while(getline(ss, line))
-		{
-			// examples:
-			//                    line = "BOOT = cdrom:\\SCUS_945.03;1\r"; // 1Xtreme (USA)
-			//                    line = "BOOT=cdrom:\\SCUS_944.23;1";     // Ape Escape (USA)
-			//                    line = "BOOT=cdrom:\\SLPS_004.35\r";     // Megatudo 2096 (Japan)
-			//                    line = "BOOT = cdrom:\SLPM803.96;1";     // Chouzetsu Daigirin '99-nen Natsu-ban (Japan)
-			//                    line = "BOOT = cdrom:\EXE\PCPX_961.61;1" // Wild Arms - 2nd Ignition (Japan) (Demo)
-
-			smatch matches;
-			regex_match(line, matches, regex("^\\s*BOOT.*=\\s*cdrom.?:\\\\*(.*?)(?:;.*\\s*|\\s*$)"));
-			if(matches.size() == 2)
-			{
-				launcher = str_uppercase(matches[1]);
-				break;
-			}
-		}
-	}
-
-	return launcher;
-}
-
-
-string serial(ImageBrowser &browser)
-{
-	string serial("<unavailable>");
-
-	string launcher = launcher_executable(browser);
-
-	smatch matches;
-	regex_match(launcher, matches, regex("(.*\\\\)*([A-Z]{4})(_|-)?([0-9]{3})\\.([0-9]{2})"));
-	if(matches.size() == 6)
-		serial = matches.str(2) + "-" + matches.str(4) + matches.str(5);
-
-	return serial;
-}
-
-
 void info(const Options &o, const std::filesystem::path &f)
 {
 	try
 	{
-		ImageBrowser browser(f);
-		auto pvd = browser.GetPVD();
-
 		cout << f.generic_string() << ": " << endl;
+
+		ImageBrowser browser(f);
+//		auto pvd = browser.GetPVD();
 
 		if(o.start_msf)
 			cout << "\tStart MSF: " << start_msf(f) << endl;
@@ -148,10 +99,16 @@ void info(const Options &o, const std::filesystem::path &f)
 			cout << "\tMode2Form2 EDC: " << (mode2form2_edc_fast(f) ? "Yes" : "No") << endl;
 
 		if(o.launcher)
-			cout << "\tLauncher: " << launcher_executable(browser) << endl;
+		{
+			string launcher = psx::extract_exe_path(browser);
+			cout << "\tLauncher: " << (launcher.empty() ? "<unavailable>" : launcher) << endl;
+		}
 
 		if(o.serial)
-			cout << "\tSerial: " << serial(browser) << endl;
+		{
+			string serial = psx::extract_serial(browser);
+			cout << "\tSerial: " << (serial.empty() ? "<unavailable>" : serial) << endl;
+		}
 	}
 	catch(const std::exception &e)
 	{

@@ -16,10 +16,11 @@ struct Options
 {
     enum class Mode
     {
-        INFO
+        INFO,
+        SUBMISSION
     };
 
-    static const std::unordered_map<std::string, Mode> MODES;
+    static const std::unordered_map<std::string, Mode> _MODES;
 
     std::string basename;
     Mode mode;
@@ -29,6 +30,7 @@ struct Options
 
     std::list<std::string> positional;
 
+    // info
     union
     {
         struct
@@ -42,6 +44,9 @@ struct Options
         };
         bool info[6];
     };
+
+    // submission
+    std::string dat_path;
 
     Options();
     Options(int argc, const char *argv[]);

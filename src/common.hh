@@ -3,6 +3,8 @@
 
 
 #include <cstddef>
+#include <filesystem>
+#include <list>
 #include <stdexcept>
 #include <string>
 
@@ -26,5 +28,7 @@ constexpr size_t dim(T(&)[N])
 {
     return N;
 }
+
+std::list<std::string> cue_extract_files(const std::filesystem::path &cue_path);
 
 }

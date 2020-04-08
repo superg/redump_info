@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <queue>
 #include <string>
 #include "cdrom.hh"
 #include "iso9660.hh"
@@ -50,6 +51,35 @@ public:
 	std::shared_ptr<Entry> RootDirectory();
 
     const iso9660::VolumeDescriptor &GetPVD() const;
+
+	template<typename F>
+	bool Iterate(F f)
+	{
+		bool interrupted = false;
+
+		std::queue<std::pair<std::string, std::shared_ptr<Entry>>> q;
+		q.push(std::pair<std::string, std::shared_ptr<Entry>>(std::string(""), RootDirectory()));
+
+		while(!q.empty())
+		{
+			auto p = q.front();
+			q.pop();
+
+			if(p.second->IsDirectory())
+				for(auto &dd : p.second->Entries())
+					q.push(std::pair<std::string, std::shared_ptr<Entry>>(dd->IsDirectory() ? (p.first.empty() ? "" : p.first + "/") + dd->Name() : p.first, dd));
+			else
+			{
+				if(f(p.first, p.second))
+				{
+					interrupted = true;
+					break;
+				}
+			}
+		}
+
+		return interrupted;
+	}
 
 private:
 	std::ifstream _ifs;
