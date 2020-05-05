@@ -1,4 +1,7 @@
 /*
+ * This is a C++ rewrite of ECC/EDC routines by Neill Corlett
+ * Original header is preserved:
+ *
  * Copyright (C) 2002 Neill Corlett
  *
  * This program is free software; you can redistribute it and/or

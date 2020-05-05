@@ -17,11 +17,14 @@ const std::unordered_map<std::string, Options::Mode> Options::_MODES =
 Options::Options()
     : basename("redump_info")
     , mode(Mode::INFO)
+    // common
     , help(false)
     , verbose(false)
-    , batch(false)
-    , overwrite(false)
     , extension("bin")
+    // info
+    , batch(false)
+    // submission
+    , overwrite(false)
 {
     for(uint32_t i = 0; i < dim(info); ++i)
         info[i] = false;
@@ -82,6 +85,51 @@ Options::Options(int argc, const char *argv[])
                     o_value = &dat_path;
                 else if(key == "--overwrite")
                     overwrite = true;
+                else if(key == "--mastering-code")
+                {
+                    mastering_code = std::make_unique<std::string>();
+                    o_value = mastering_code.get();
+                }
+                else if(key == "--mastering-sid")
+                {
+                    mastering_sid = std::make_unique<std::string>();
+                    o_value = mastering_sid.get();
+                }
+                else if(key == "--data-mould-sid")
+                {
+                    data_mould_sid = std::make_unique<std::string>();
+                    o_value = data_mould_sid.get();
+                }
+                else if(key == "--label-mould-sid")
+                {
+                    label_mould_sid = std::make_unique<std::string>();
+                    o_value = label_mould_sid.get();
+                }
+                else if(key == "--additional-mould")
+                {
+                    additional_mould = std::make_unique<std::string>();
+                    o_value = additional_mould.get();
+                }
+                else if(key == "--toolstamp")
+                {
+                    toolstamp = std::make_unique<std::string>();
+                    o_value = toolstamp.get();
+                }
+                else if(key == "--contents")
+                {
+                    contents = std::make_unique<std::string>();
+                    o_value = contents.get();
+                }
+                else if(key == "--version")
+                {
+                    version = std::make_unique<std::string>();
+                    o_value = version.get();
+                }
+                else if(key == "--edition")
+                {
+                    edition = std::make_unique<std::string>();
+                    o_value = edition.get();
+                }
                 // unknown option
                 else
                 {
@@ -146,13 +194,42 @@ void Options::PrintUsage(std::ostream &os)
     os << std::endl;
 
     os << "modes: " << std::endl;
-    os << "\tinfo\tdefault, outputs basic image information" << std::endl;
+    os << "\tinfo\t\tdefault mode, outputs basic data track information" << std::endl;
+    os << "\tsubmission\tgenerates !submissionInfo_*.txt for further submission to redump.org" << std::endl;
     os << std::endl;
 
-    os << "options: " << std::endl;
+    os << "path: " << std::endl;
+    os << "\tcan be either a file path or a directory path which will be processed recursively" << std::endl;
+    os << std::endl;
+
+    os << "general options: " << std::endl;
     os << "\t--help,-h\tprint help message" << std::endl;
     os << "\t--verbose,-V\tverbose output" << std::endl;
-    os << "\t--extension,-e\tdefault CD image extension" << std::endl;
+    os << "\t--extension,-e\tdefault CD track extension [bin]" << std::endl;
+    os << std::endl;
+
+    os << "info options: " << std::endl;
+    os << "\t--start-msf\tprint start MSF address" << std::endl;
+    os << "\t--sector-size\tprint sector size" << std::endl;
+    os << "\t--edc\t\tprint print EDC information (PSX)" << std::endl;
+    os << "\t--serial\tprint print disc serial (PSX)" << std::endl;
+    os << "\t--launcher\tprint startup executable path" << std::endl;
+//    os << "\t--system-area\tprint system area information (PSX)" << std::endl;
+    os << "\t--batch\t\tbatch mode, supress formatted output" << std::endl;
+    os << std::endl;
+
+    os << "submission options: " << std::endl;
+    os << "\t--dat-file\t\t\tpath to redump DAT file" << std::endl;
+    os << "\t--overwrite\t\t\toverwrite generated !submissionInfo_*.txt" << std::endl;
+    os << "\t--mastering-code <value>\tfill \"Mastering Code\" field with value" << std::endl;
+    os << "\t--mastering-sid <value>\t\tfill \"Mastering SID Code\" field with value" << std::endl;
+    os << "\t--data-mould-sid <value>\tfill \"Data-Side Mould SID Code\" field with value" << std::endl;
+    os << "\t--label-mould-sid <value>\tfill \"Label-Side Mould SID Code\" field with value" << std::endl;
+    os << "\t--additional-mould <value>\tfill \"Additional Mould\" field with value" << std::endl;
+    os << "\t--toolstamp <value>\t\tfill \"Toolstamp or Mastering Code\" field with value" << std::endl;
+    os << "\t--contents <value>\t\tfill \"Contents\" field with value" << std::endl;
+    os << "\t--version <value>\t\tfill \"Version\" field with value" << std::endl;
+    os << "\t--edition <value>\t\tfill \"Edition/Release\" field with value" << std::endl;
 }
 
 }

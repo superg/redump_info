@@ -3,6 +3,7 @@
 
 
 #include <list>
+#include <memory>
 #include <ostream>
 #include <string>
 #include <unordered_map>
@@ -19,18 +20,17 @@ struct Options
         INFO,
         SUBMISSION
     };
-
     static const std::unordered_map<std::string, Mode> _MODES;
 
-    std::string basename;
     Mode mode;
+
+    std::string basename;
+    std::list<std::string> positional;
+
+    // common
     bool help;
     bool verbose;
-    bool batch;
-    bool overwrite;
     std::string extension;
-
-    std::list<std::string> positional;
 
     // info
     union
@@ -46,9 +46,21 @@ struct Options
         };
         bool info[6];
     };
+    bool batch;
 
     // submission
     std::string dat_path;
+    bool overwrite;
+    // lazy way to distinguish between no key and key with an empty value
+    std::unique_ptr<std::string> mastering_code;
+    std::unique_ptr<std::string> mastering_sid;
+    std::unique_ptr<std::string> data_mould_sid;
+    std::unique_ptr<std::string> label_mould_sid;
+    std::unique_ptr<std::string> additional_mould;
+    std::unique_ptr<std::string> toolstamp;
+    std::unique_ptr<std::string> contents;
+    std::unique_ptr<std::string> version;
+    std::unique_ptr<std::string> edition;
 
     Options();
     Options(int argc, const char *argv[]);

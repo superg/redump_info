@@ -1,3 +1,5 @@
+// This is a C++ rewrite of ECC/EDC routines by Neill Corlett
+
 #pragma once
 
 

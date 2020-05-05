@@ -442,7 +442,7 @@ void update_info_from_dat(SubmissionInfo &info, const DAT::Game &g)
                 bool first_entry = true;
                 for(auto const &l : languages)
                 {
-                    info.languages = (first_entry ? "" : ", ") + l;
+                    info.languages = first_entry ? l : info.languages + ", " + l;
                     first_entry = false;
                 }
             }
@@ -666,19 +666,25 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             }
         }
 
-
-
-        //FIXME: parse command line arguments for mass processing files
-        info.mastering_code;
-        info.mastering_sid;
-        info.data_mould_sid;
-        info.label_mould_sid;
-        info.additional_mould;
-        info.toolstamp;
-        info.contents;
-        info.version;
-        info.edition;
-
+        // override info fields if specified by command line
+        if(o.mastering_code)
+            info.mastering_code = *o.mastering_code;
+        if(o.mastering_sid)
+            info.mastering_sid = *o.mastering_sid;
+        if(o.data_mould_sid)
+            info.data_mould_sid = *o.data_mould_sid;
+        if(o.label_mould_sid)
+            info.label_mould_sid = *o.label_mould_sid;
+        if(o.additional_mould)
+            info.additional_mould = *o.additional_mould;
+        if(o.toolstamp)
+            info.toolstamp = *o.toolstamp;
+        if(o.contents)
+            info.contents = *o.contents;
+        if(o.version)
+            info.version = *o.version;
+        if(o.edition)
+            info.edition = *o.edition;
 
         // store submission info to game named file
         {
