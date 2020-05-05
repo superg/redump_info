@@ -8,4 +8,5 @@ This is a command line utility to aid redump.org submissions as well as general 
 
 ## Contacts
 E-mail: gennadiy.brich@gmail.com
+
 Discord: superg#9200
