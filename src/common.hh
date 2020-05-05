@@ -15,7 +15,7 @@
 #define STR(arg__) #arg__
 
 // meaningful throw
-#define throw_line(arg__) throw std::runtime_error(std::string() + arg__ + " {" + __FILE__ + ":" + std::to_string(__LINE__) + "}")
+#define throw_line(arg__) throw_file_line(std::string() + arg__, __FILE__, __LINE__)
 
 
 
@@ -28,6 +28,8 @@ constexpr size_t dim(T(&)[N])
 {
     return N;
 }
+
+void throw_file_line(const std::string &message, const char *file, int line);
 
 std::list<std::string> cue_extract_files(const std::filesystem::path &cue_path);
 

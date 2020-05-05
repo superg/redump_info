@@ -7,11 +7,8 @@
 #include <vector>
 #include "common.hh"
 #include "endian.hh"
+#include "strings.hh"
 #include "image_browser.hh"
-
-
-
-//FIXME: make case insensitive
 
 
 
@@ -29,7 +26,7 @@ ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
 	: _ifs(data_track, std::ifstream::binary)
 {
 	if(_ifs.fail())
-		throw_line("unable to open file [" + std::strerror(errno) + "]");
+		throw_line("unable to open file (" + std::strerror(errno) + ")");
 
 	uint64_t size = std::filesystem::file_size(data_track);
 
@@ -80,16 +77,17 @@ ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
 			break;
 	}
 
-	if(!pvd)
+	if(pvd == nullptr)
 		throw_line("primary volume descriptor not found");
 
 	_pvd = *pvd;
+    _trackSize = (uint32_t)(size / sizeof(cdrom::Sector));
 }
 
 
 std::shared_ptr<ImageBrowser::Entry> ImageBrowser::RootDirectory()
 {
-	return std::shared_ptr<Entry>(new Entry(std::string(""), 1, _pvd.primary.root_directory_record, _ifs));
+	return std::shared_ptr<Entry>(new Entry(*this, std::string(""), 1, _pvd.primary.root_directory_record));
 }
 
 
@@ -99,11 +97,11 @@ const iso9660::VolumeDescriptor &ImageBrowser::GetPVD() const
 }
 
 
-ImageBrowser::Entry::Entry(const std::string &name, uint32_t version, const iso9660::DirectoryRecord &directory_record, std::ifstream &ifs)
-	: _name(name)
+ImageBrowser::Entry::Entry(ImageBrowser &browser, const std::string &name, uint32_t version, const iso9660::DirectoryRecord &directory_record)
+	: _browser(browser)
+    , _name(name)
 	, _version(version)
 	, _directory_record(directory_record)
-	, _ifs(ifs)
 {
 	;
 }
@@ -155,7 +153,7 @@ std::list<std::shared_ptr<ImageBrowser::Entry>> ImageBrowser::Entry::Entries()
 					uint32_t version(s == std::string::npos ? 1 : std::stoi(identifier.substr(s + 1)));
 
 //					entries.push_back(std::make_shared<Entry>(name, version, dr, _ifs));
-                    entries.push_back(std::shared_ptr<Entry>(new Entry(name, version, dr, _ifs)));
+                    entries.push_back(std::shared_ptr<Entry>(new Entry(_browser, name, version, dr)));
 				}
 
 				i += dr.length;
@@ -174,17 +172,22 @@ std::shared_ptr<ImageBrowser::Entry> ImageBrowser::Entry::SubEntry(const std::fi
 {
 	std::shared_ptr<Entry> entry;
 
-    for(auto const &p : path)
+    std::filesystem::path path_case(str_uppercase(path.generic_string()));
+
+    for(auto const &p : path_case)
     {
         auto directories = entry ? entry->Entries() : Entries();
         bool found = false;
         for(auto &d : directories)
-            if(d->Name() == p || (d->Name() + ';' + std::to_string(d->Version())) == p)
+        {
+            std::string name_case(str_uppercase(d->Name()));
+            if(name_case == p || (name_case + ';' + std::to_string(d->Version())) == p)
             {
                 entry = d;
                 found = true;
                 break;
             }
+        }
 
         if(!found)
         {
@@ -209,9 +212,16 @@ uint32_t ImageBrowser::Entry::Version() const
 }
 
 
-uint32_t ImageBrowser::Entry::Size() const
+bool ImageBrowser::Entry::IsDummy() const
 {
-	return _directory_record.data_length.lsb;
+    return _directory_record.offset.lsb + SectorSize() >= _browser._trackSize || _directory_record.offset.lsb >= _browser._trackSize;
+}
+
+
+uint32_t ImageBrowser::Entry::SectorSize() const
+{
+    return _directory_record.data_length.lsb / cdrom::FORM1_DATA_SIZE
+        + (_directory_record.data_length.lsb % cdrom::FORM1_DATA_SIZE ? 1 : 0);
 }
 
 
@@ -236,27 +246,27 @@ std::vector<uint8_t> ImageBrowser::Entry::Read(bool form2, bool throw_on_error)
 {
     std::vector<uint8_t> data;
 
-    uint32_t size = Size();
+    uint32_t size = _directory_record.data_length.lsb;
     data.reserve(size);
 
-    _ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
-    if(_ifs.fail())
+    _browser._ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
+    if(_browser._ifs.fail())
     {
-        _ifs.clear();
+        _browser._ifs.clear();
         if(throw_on_error)
             throw_line("seek failure");
     }
     else
     {
-        uint32_t sectors_count = size / cdrom::FORM1_DATA_SIZE + (size % cdrom::FORM1_DATA_SIZE ? 1 : 0);
+        uint32_t sectors_count = SectorSize();
         for(uint32_t s = 0; s < sectors_count; ++s)
         {
             cdrom::Sector sector;
-            _ifs.read((char *)&sector, sizeof(sector));
-            if(_ifs.fail())
+            _browser._ifs.read((char *)&sector, sizeof(sector));
+            if(_browser._ifs.fail())
             {
                 auto message(std::string("read failure [") + std::strerror(errno) + "]");
-                _ifs.clear();
+                _browser._ifs.clear();
                 if(throw_on_error)
                     throw_line(message);
 
@@ -311,25 +321,25 @@ bool ImageBrowser::Entry::IsInterleaved() const
 
     static const uint32_t SECTORS_TO_ANALYZE = 8 * 4;
 
-    _ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
-    if(_ifs.fail())
+    _browser._ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
+    if(_browser._ifs.fail())
     {
-        _ifs.clear();
+        _browser._ifs.clear();
         throw_line("seek failure");
     }
 
     uint8_t file_form = 0;
 
-    uint32_t size = Size();
-    uint32_t sectors_count = std::min(size / cdrom::FORM1_DATA_SIZE + (size % cdrom::FORM1_DATA_SIZE ? 1 : 0), SECTORS_TO_ANALYZE);
+    uint32_t size = _directory_record.data_length.lsb;
+    uint32_t sectors_count = std::min(SectorSize(), SECTORS_TO_ANALYZE);
     for(uint32_t s = 0; s < sectors_count; ++s)
     {
         cdrom::Sector sector;
-        _ifs.read((char *)&sector, sizeof(sector));
-        if(_ifs.fail())
+        _browser._ifs.read((char *)&sector, sizeof(sector));
+        if(_browser._ifs.fail())
         {
-            auto message(std::string("read failure [") + std::strerror(errno) + "]");
-            _ifs.clear();
+            auto message(std::string("read failure (") + std::strerror(errno) + ")");
+            _browser._ifs.clear();
             throw_line(message);
         }
 
@@ -362,7 +372,7 @@ std::vector<uint8_t> ImageBrowser::Entry::Read(uint32_t data_offset, uint32_t si
 std::vector<uint8_t> data;
 data.reserve(size);
 
-uint32_t sectors_count = Size() / cdrom::FORM1_DATA_SIZE + (Size() % cdrom::FORM1_DATA_SIZE ? 1 : 0);
+uint32_t sectors_count = _directory_record.data_length.lsb / cdrom::FORM1_DATA_SIZE + (_directory_record.data_length.lsb % cdrom::FORM1_DATA_SIZE ? 1 : 0);
 
 uint32_t sector_offset = data_offset / cdrom::FORM1_DATA_SIZE;
 uint32_t offset = data_offset % cdrom::FORM1_DATA_SIZE;
@@ -404,7 +414,7 @@ std::vector<uint8_t> ImageBrowser::Entry::Read(std::set<uint8_t> *xa_channels)
 {
     std::vector<uint8_t> data;
 
-    uint32_t size = Size();
+    uint32_t size = _directory_record.data_length.lsb;
     data.reserve(size);
 
     _ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
@@ -459,7 +469,7 @@ std::vector<uint8_t> ImageBrowser::Entry::ReadXA(uint8_t channel)
         throw_line("fff");
     }
 
-	uint32_t sectors_count = Size() / cdrom::FORM1_DATA_SIZE + (Size() % cdrom::FORM1_DATA_SIZE ? 1 : 0);
+	uint32_t sectors_count = _directory_record.data_length.lsb / cdrom::FORM1_DATA_SIZE + (_directory_record.data_length.lsb % cdrom::FORM1_DATA_SIZE ? 1 : 0);
 	for(uint32_t s = 0; s < sectors_count; ++s)
 	{
 		cdrom::Sector sector;

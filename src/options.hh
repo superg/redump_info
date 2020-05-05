@@ -26,6 +26,8 @@ struct Options
     Mode mode;
     bool help;
     bool verbose;
+    bool batch;
+    bool overwrite;
     std::string extension;
 
     std::list<std::string> positional;

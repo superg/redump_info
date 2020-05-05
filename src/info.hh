@@ -10,6 +10,6 @@
 namespace redump_info
 {
 
-void info(const Options &o, const std::filesystem::path &f);
+void info(const Options &o, const std::filesystem::path &f, void *data);
 
 }

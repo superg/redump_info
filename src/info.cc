@@ -22,7 +22,7 @@ string start_msf(const std::filesystem::path &f)
 {
 	ifstream ifs(f, ifstream::binary);
 	if(ifs.fail())
-		throw_line("unable to open file [" + std::strerror(errno) + "]");
+		throw_line("unable to open file (" + std::strerror(errno) + ")");
 
 	ifs.seekg(offsetof(cdrom::Sector, header.address));
 	if(ifs.fail())
@@ -30,7 +30,7 @@ string start_msf(const std::filesystem::path &f)
 	cdrom::Sector::Header::Address address;
 	ifs.read((char *)&address, sizeof(address));
 	if(ifs.fail())
-		throw_line(std::string("read failure [") + std::strerror(errno) + "]");
+		throw_line(std::string("read failure (") + std::strerror(errno) + ")");
 
 	std::stringstream ss;
 	ss << hex << setfill('0') << setw(2) << (unsigned)address.minute << ':' << setw(2) << (unsigned)address.second << '.' << dec << setw(3) << (unsigned)address.frame;
@@ -45,7 +45,7 @@ bool mode2form2_edc_fast(const std::filesystem::path &f)
 
 	ifstream ifs(f, ifstream::binary);
 	if(ifs.fail())
-		throw_line("unable to open file [" + std::strerror(errno) + "]");
+		throw_line("unable to open file (" + std::strerror(errno) + ")");
 
 	// easier to iterate this way
 	uint64_t sectors_count = filesystem::file_size(f);
@@ -80,40 +80,74 @@ bool mode2form2_edc_fast(const std::filesystem::path &f)
 }
 
 
-void info(const Options &o, const std::filesystem::path &f)
+void info(const Options &o, const std::filesystem::path &f, void *)
 {
 	try
 	{
-		cout << f.generic_string() << ": " << endl;
-
 		ImageBrowser browser(f);
-//		auto pvd = browser.GetPVD();
+
+		if(!o.batch)
+			cout << f.generic_string() << ": " << endl;
 
 		if(o.start_msf)
-			cout << "\tStart MSF: " << start_msf(f) << endl;
+		{
+			if(!o.batch)
+				cout << "\tStart MSF: ";
+			cout << start_msf(f) << endl;
+		}
 
 		if(o.sector_size)
-			cout << "\tSectors count: " << filesystem::file_size(f) / sizeof(cdrom::Sector) << endl;
+		{
+			if(!o.batch)
+				cout << "\tSectors count: ";
+			cout << filesystem::file_size(f) / sizeof(cdrom::Sector) << endl;
+		}
 
 		if(o.edc)
-			cout << "\tMode2Form2 EDC: " << (mode2form2_edc_fast(f) ? "Yes" : "No") << endl;
+		{
+			if(!o.batch)
+				cout << "\tMode2Form2 EDC: ";
+			cout << (mode2form2_edc_fast(f) ? "Yes" : "No") << endl;
+		}
 
 		if(o.launcher)
 		{
 			string launcher = psx::extract_exe_path(browser);
-			cout << "\tLauncher: " << (launcher.empty() ? "<unavailable>" : launcher) << endl;
+
+			//DEBUG
+			if(launcher.empty())
+			{
+				cout << "GGG" << endl;
+			}
+
+			if(!o.batch)
+				cout << "\tLauncher: ";
+			cout << (launcher.empty() ? "<unavailable>" : launcher) << endl;
 		}
 
 		if(o.serial)
 		{
 			string serial = psx::extract_serial(browser);
-			cout << "\tSerial: " << (serial.empty() ? "<unavailable>" : serial) << endl;
+
+			//DEBUG
+			if(serial.empty())
+			{
+				string launcher = psx::extract_exe_path(browser);
+				if(launcher.find(".EXE") == string::npos)
+				{
+					cout << "GGG" << endl;
+				}
+			}
+
+			if(!o.batch)
+				cout << "\tSerial: ";
+			cout << (serial.empty() ? "<unavailable>" : serial) << endl;
 		}
 	}
 	catch(const std::exception &e)
 	{
 		if(o.verbose)
-			cout << f.generic_string() << ": skipped [" << e.what() << "]" << endl;
+			cout << f.generic_string() << ": skipped {" << e.what() << "}" << endl;
 	}
 }
 

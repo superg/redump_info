@@ -19,6 +19,8 @@ Options::Options()
     , mode(Mode::INFO)
     , help(false)
     , verbose(false)
+    , batch(false)
+    , overwrite(false)
     , extension("bin")
 {
     for(uint32_t i = 0; i < dim(info); ++i)
@@ -50,6 +52,7 @@ Options::Options(int argc, const char *argv[])
         {
             if(o_value == nullptr)
             {
+                // common
                 std::string key(o);
                 if(key == "--help" || key == "-h")
                     help = true;
@@ -57,6 +60,7 @@ Options::Options(int argc, const char *argv[])
                     verbose = true;
                 else if(key == "--extension" || key == "-e")
                     o_value = &extension;
+
                 // info
                 else if(key == "--start-msf")
                     start_msf = true;
@@ -70,18 +74,22 @@ Options::Options(int argc, const char *argv[])
                     launcher = true;
                 else if(key == "--system-area")
                     system_area = true;
+                else if(key == "--batch")
+                    batch = true;
 
                 // submission
                 else if(key == "--dat-file")
                     o_value = &dat_path;
+                else if(key == "--overwrite")
+                    overwrite = true;
                 // unknown option
                 else
                 {
-                    throw_line("unknown option [" + key + "]");
+                    throw_line("unknown option (" + key + ")");
                 }
             }
             else
-                throw_line("parse error, expected option value [" + argv[i - 1] + "]");
+                throw_line("parse error, expected option value (" + argv[i - 1] + ")");
         }
         break;
 
@@ -116,9 +124,12 @@ std::string Options::ModeString()
 
     for(auto const &m : _MODES)
         if(m.second == mode)
-            return m.first;
+        {
+            mode_string = m.first;
+            break;
+        }
 
-    throw_line("mode not found");
+    return mode_string;
 }
 
 

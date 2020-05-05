@@ -1,6 +1,8 @@
 set(sources
 	"crc/Crc32.cpp"
 	"crc/Crc32.h"
+	"tinyxml/tinyxml2.cpp"
+	"tinyxml/tinyxml2.h"
 	"block_hasher.hh"
 	"cdrom.cc"
 	"cdrom.hh"
@@ -8,6 +10,8 @@ set(sources
 	"common.cc"
 	"crc16.cc"
 	"crc16.hh"
+	"dat.cc"
+	"dat.hh"
 	"ecc_edc.hh"
 	"ecc_edc.cc"
 	"endian.cc"

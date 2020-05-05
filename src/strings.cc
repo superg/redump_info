@@ -115,14 +115,6 @@ std::vector<std::string> tokenize_quoted(const std::string &str, const char *del
 }
 
 
-bool string_ends_with(const std::string &value, const std::string &ending)
-{
-    if(ending.size() > value.size())
-        return false;
-    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
-}
-
-
 void ltrim(std::string &s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int c) { return !std::isspace(c); }));
@@ -139,6 +131,13 @@ void trim(std::string &s)
 {
     ltrim(s);
     rtrim(s);
+}
+
+
+void replace_all_occurences(std::string &str, const std::string &from, const std::string &to)
+{
+    for(size_t pos = 0; (pos = str.find(from, pos)) != std::string::npos; pos += to.length())
+        str.replace(pos, from.length(), to);
 }
 
 }

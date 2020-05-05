@@ -1,6 +1,8 @@
 #include <iomanip>
 #include <regex>
+#include <set>
 #include <sstream>
+#include "common.hh"
 #include "crc16.hh"
 #include "endian.hh"
 #include "strings.hh"
@@ -52,18 +54,70 @@ std::string extract_exe_path(ImageBrowser &browser)
 }
 
 
+std::pair<std::string, std::string> extract_serial_pair(ImageBrowser &browser)
+{
+    std::pair<std::string, std::string> serial;
+
+    std::string exe_path = extract_exe_path(browser);
+
+    std::smatch matches;
+    std::regex_match(exe_path, matches, std::regex("(.*\\\\)*([A-Z]*)(_|-)?([A-Z]?[0-9]+)\\.([0-9]+[A-Z]?)"));
+    if(matches.size() == 6)
+    {
+        serial.first = matches.str(2);
+        serial.second = matches.str(4) + matches.str(5);
+
+        // Road Writer (USA)
+        if(serial.first.empty() && serial.second == "907127001")
+            serial.first = "LSP";
+        // GameGenius Ver. 5.0 (Taiwan) (En,Zh) (Unl)
+        else if(serial.first == "PAR" && serial.second == "90001")
+        {
+            serial.first.clear();
+            serial.second.clear();
+        }
+    }
+
+    return serial;
+}
+
+
 std::string extract_serial(ImageBrowser &browser)
 {
-	std::string serial;
+    auto p = extract_serial_pair(browser);
+    
+    //FIXME: region and dash
+    std::string serial;
+    if(!p.first.empty() || !p.second.empty())
+        serial = p.first + (detect_region(p.first) == "Japan" ?  " " : "-") + p.second;
 
-	std::string exe_path = extract_exe_path(browser);
+    return serial;
+}
 
-	std::smatch matches;
-	std::regex_match(exe_path, matches, std::regex("(.*\\\\)*([A-Z]{4})(_|-)?([0-9]{3})\\.([0-9]{2})"));
-	if(matches.size() == 6)
-		serial = matches.str(2) + "-" + matches.str(4) + matches.str(5);
 
-	return serial;
+std::string detect_region(const std::string &prefix)
+{
+    std::string region;
+
+    const std::set<std::string> REGION_J {"ESPM", "PAPX", "PCPX", "PDPX", "SCPM", "SCPS", "SCZS", "SIPS", "SLKA", "SLPM", "SLPS"};
+    const std::set<std::string> REGION_U {"LSP", "SCUS", "SLUS", "SLUSP"};
+    const std::set<std::string> REGION_E {"SCED", "SCES", "SLED", "SLES"};
+    // multi: "DTL", "PBPX"
+
+    if(REGION_J.find(prefix) != REGION_J.end())
+        region = "Japan";
+    else if(REGION_U.find(prefix) != REGION_U.end())
+        region = "USA";
+    else if(REGION_E.find(prefix) != REGION_E.end())
+        region = "Europe";
+
+    return region;
+}
+
+
+std::string extract_region(ImageBrowser &browser)
+{
+    return detect_region(extract_serial_pair(browser).first);
 }
 
 
@@ -86,7 +140,7 @@ void detect_anti_modchip_string(std::ostream &os, ImageBrowser &browser)
 
 		auto fp((path.empty() ? "" : path + "/") + d->Name());
 
-		if(!d->IsInterleaved())
+		if(!d->IsDummy() && !d->IsInterleaved())
 		{
 			auto data = d->Read(false, false);
 
@@ -107,15 +161,15 @@ void detect_libcrypt(std::ostream &os, const std::filesystem::path &sub_file, co
 {
     uint32_t file_size = (uint32_t)std::filesystem::file_size(sub_file);
     if(file_size % (sizeof(cdrom::SubQ) * 8))
-        throw std::runtime_error("subchannel file is incomplete [" + sub_file.generic_string() + "]");
+        throw_line("subchannel file is incomplete (" + sub_file.generic_string() + ")");
 
     std::ifstream ifs(sub_file, std::ifstream::binary);
     if(ifs.fail())
-        throw std::runtime_error("unable to open subchannel file [" + sub_file.generic_string() + "]");
+        throw_line("unable to open subchannel file (" + sub_file.generic_string() + ")");
 
     std::ofstream ofs(sbi_file, std::ifstream::binary);
     if(ofs.fail())
-        throw std::runtime_error("unable to create SBI file [" + sbi_file.generic_string() + "]");
+        throw_line("unable to create SBI file (" + sbi_file.generic_string() + ")");
     ofs.write("SBI", 4);
 
     // skip first P
