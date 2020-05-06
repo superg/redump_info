@@ -57,6 +57,7 @@ struct SubmissionInfo
     string edition;
     string edc;
     string pvd;
+    string copy_protection;
     string antimod;
     string libcrypt;
     string dat;
@@ -69,7 +70,7 @@ struct SubmissionInfo
         , foreign_title("(OPTIONAL)")
         , disc_letter("(OPTIONAL)")
         , disc_title("(OPTIONAL)")
-        , system("Sony PlayStation")
+        , system("(REQUIRED)")
         , media_type("CD-ROM")
         , category("Games")
         , region("World (CHANGE THIS)")
@@ -90,6 +91,7 @@ struct SubmissionInfo
         , edition("Original (VERIFY THIS)")
         , edc("(REQUIRED)")
         , pvd("(REQUIRED)")
+        , copy_protection("(REQUIRED)")
         , antimod("(REQUIRED)")
         , libcrypt("(REQUIRED)")
         , dat("(REQUIRED)")
@@ -164,6 +166,10 @@ struct SubmissionInfo
         os << endl << pvd << endl;
 
         os << "Copy Protection:" << endl;
+        if(!copy_protection.empty())
+        {
+            os << "\tCopy Protection: " << copy_protection << endl;
+        }
         if(!antimod.empty())
         {
             os << "\tAnti-modchip: ";
@@ -520,30 +526,34 @@ void submission(const Options &o, const filesystem::path &p, void *data)
 
         cout << "\tchecksums calculation... " << flush;
         list<DAT::Game::Rom> roms;
-        bool data_track = true;
+        bool first_data_track = true;
         for(auto const &f : cue_files)
         {
-            roms.emplace_back(create_file_entry(p.parent_path(), f, info, data_track));
-            data_track = false;
+            roms.emplace_back(create_file_entry(p.parent_path(), f, info, first_data_track));
+            first_data_track = false;
         }
         cout << "done" << endl;
 
-        string region;
-
         // data track filesystem routines
+        filesystem::path data_track(p.parent_path() / roms.front().name);
+        ImageBrowser browser(data_track);
+
+        // PVD
+        auto pvd = browser.GetPVD();
+        info.pvd = hexdump((uint8_t *)&pvd, 0x320, 96);
+
+        // exe path/date and disc system detection
+        string exe_path = psx::extract_exe_path(browser);
+        auto exe_file = browser.RootDirectory()->SubEntry(exe_path);
+
+        DiscSystem disc_system(exe_file ? DiscSystem::PSX : DiscSystem::PC);
+
+        switch(disc_system)
         {
-            filesystem::path data_track(p.parent_path() / roms.front().name);
-            ImageBrowser browser(data_track);
-
-            // PVD
-            auto pvd = browser.GetPVD();
-            info.pvd = hexdump((uint8_t *)&pvd, 0x320, 96);
-
-            // exe path / date
-            string exe_path = psx::extract_exe_path(browser);
-            auto exe_file = browser.RootDirectory()->SubEntry(exe_path);
-            if(!exe_file)
-                throw_line("unable to access PSX-EXE directory record (" + exe_path + ")");
+        case DiscSystem::PSX:
+        {
+            info.system = "Sony PlayStation";
+            info.copy_protection.clear();
             info.exe_date = exe_file->Date();
 
             // serial
@@ -554,10 +564,10 @@ void submission(const Options &o, const filesystem::path &p, void *data)
                 info.disc_serial = serial;
 
             // region
-            region = psx::extract_region(browser);
+            string region = psx::extract_region(browser);
             if(!region.empty())
                 info.region = region;
-            
+
             // antimod
             cout << "\tsearching for anti modchip string... " << flush;
             {
@@ -570,25 +580,36 @@ void submission(const Options &o, const filesystem::path &p, void *data)
                 info.antimod = am_log;
             }
             cout << "done" << endl;
-        }
 
-        // libcrypt
-        if(region == "Europe")
-        {
-            auto sub_file_path(filesystem::path(basename + ".sub"));
-            if(filesystem::exists(sub_file_path))
+            // libcrypt
+            if(region == "Europe")
             {
-                stringstream ss;
-                psx::detect_libcrypt(ss, sub_file_path, filesystem::path(basename + ".sbi"));
-                string lc_log(ss.str());
-                if(lc_log.empty())
-                    lc_log = "No";
+                auto sub_file_path(filesystem::path(basename + ".sub"));
+                if(filesystem::exists(sub_file_path))
+                {
+                    stringstream ss;
+                    psx::detect_libcrypt(ss, sub_file_path, filesystem::path(basename + ".sbi"));
+                    string lc_log(ss.str());
+                    if(lc_log.empty())
+                        lc_log = "No";
 
-                info.libcrypt = lc_log;
+                    info.libcrypt = lc_log;
+                }
             }
+            else
+                info.libcrypt = "No";
         }
-        else
-            info.libcrypt = "No";
+        break;
+
+        case DiscSystem::PC:
+            info.system = "IBM PC Compatible";
+            info.comments = "[T:ISBN] (Optional)";
+            info.exe_date.clear();
+            info.edc.clear();
+            info.antimod.clear();
+            info.libcrypt.clear();
+            break;
+        }
 
         // DAT
         //FIXME: use tinyxml?
@@ -659,7 +680,7 @@ void submission(const Options &o, const filesystem::path &p, void *data)
         {
             if(info.region == "Japan" || info.region == "Asia")
                 info.languages = "Japanese";
-            else if(REGIONS_ENGLISH.find(info.region) == REGIONS_ENGLISH.end())
+            else if(REGIONS_ENGLISH.find(info.region) != REGIONS_ENGLISH.end())
             {
                 info.languages = "English";
                 info.foreign_title.clear();
