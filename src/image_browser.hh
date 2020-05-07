@@ -48,6 +48,8 @@ public:
 		uint32_t SectorSize() const;
 	};
 
+	static bool IsDataTrack(const std::filesystem::path &track);
+
 	ImageBrowser(const std::filesystem::path &data_track);
 
 	std::shared_ptr<Entry> RootDirectory();

@@ -22,6 +22,67 @@
 namespace redump_info
 {
 
+//FIXME: reorganize so no code duplication in ImageBrowser::ImageBrowser()
+bool ImageBrowser::IsDataTrack(const std::filesystem::path &track)
+{
+    std::ifstream ifs(track, std::ifstream::binary);
+
+    if(ifs.fail())
+        return false;
+
+    uint64_t size = std::filesystem::file_size(track);
+
+    if(size % sizeof(cdrom::Sector))
+        return false;
+
+    if(size < ((uint64_t)iso9660::SYSTEM_AREA_SIZE + 1) * sizeof(cdrom::Sector))
+        return false;
+
+    // skip system area
+    ifs.seekg(iso9660::SYSTEM_AREA_SIZE * sizeof(cdrom::Sector));
+    if(ifs.fail())
+        return false;
+
+    // find primary volume descriptor
+    iso9660::VolumeDescriptor *pvd = nullptr;
+    for(;;)
+    {
+        cdrom::Sector sector;
+        ifs.read((char *)&sector, sizeof(sector));
+        if(ifs.fail())
+            break;
+
+        iso9660::VolumeDescriptor *vd;
+        switch(sector.header.mode)
+        {
+        case 1:
+            vd = (iso9660::VolumeDescriptor *)sector.mode1.user_data;
+            break;
+
+        case 2:
+            vd = (iso9660::VolumeDescriptor *)sector.mode2.xa.form1.user_data;
+            break;
+
+        default:
+            continue;
+        }
+
+        if(memcmp(vd->standard_identifier, iso9660::STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)))
+            break;
+
+        if(vd->type == iso9660::VolumeDescriptor::Type::PRIMARY)
+        {
+            pvd = vd;
+            break;
+        }
+        else if(vd->type == iso9660::VolumeDescriptor::Type::SET_TERMINATOR)
+            break;
+    }
+
+    return pvd != nullptr;
+}
+
+
 ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
 	: _ifs(data_track, std::ifstream::binary)
 {

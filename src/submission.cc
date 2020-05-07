@@ -161,38 +161,45 @@ struct SubmissionInfo
             os << endl;
         }
 
-        os << "Extras:" << endl;
-        os << "\tPrimary Volume Descriptor (PVD):" << endl;
-        os << endl << pvd << endl;
+        if(!pvd.empty())
+        {
+            os << "Extras:" << endl << "\tPrimary Volume Descriptor (PVD):" << endl;
+            os << endl << pvd << endl;
+        }
 
-        os << "Copy Protection:" << endl;
-        if(!copy_protection.empty())
+        if(!copy_protection.empty() || !antimod.empty() || !libcrypt.empty())
         {
-            os << "\tCopy Protection: " << copy_protection << endl;
-        }
-        if(!antimod.empty())
-        {
-            os << "\tAnti-modchip: ";
-            if(antimod == "No" || antimod == "(REQUIRED)")
-                os << antimod << endl;
-            else
+            os << "Copy Protection:" << endl;
+            if(!copy_protection.empty())
             {
-                os << "Yes" << endl;
-                os << endl << antimod << endl;
+                os << "\tCopy Protection: " << copy_protection << endl;
             }
-        }
-        if(!libcrypt.empty())
-        {
-            os << "\tLibCrypt: ";
-            if(libcrypt == "No" || libcrypt == "(REQUIRED)")
-                os << libcrypt << endl;
-            else
+
+            if(!antimod.empty())
             {
-                os << "Yes" << endl;
-                os << endl << libcrypt << endl;
+                os << "\tAnti-modchip: ";
+                if(antimod == "No" || antimod == "(REQUIRED)")
+                    os << antimod << endl;
+                else
+                {
+                    os << "Yes" << endl;
+                    os << endl << antimod << endl;
+                }
             }
+
+            if(!libcrypt.empty())
+            {
+                os << "\tLibCrypt: ";
+                if(libcrypt == "No" || libcrypt == "(REQUIRED)")
+                    os << libcrypt << endl;
+                else
+                {
+                    os << "Yes" << endl;
+                    os << endl << libcrypt << endl;
+                }
+            }
+            os << endl;
         }
-        os << endl;
 
         os << "Tracks and Write Offsets:" << endl;
         os << "\tDAT:" << endl;
@@ -465,8 +472,13 @@ void update_info_from_dat(SubmissionInfo &info, const DAT::Game &g)
             }
             else
             {
+                // region
+                if(REGIONS.find(o) != REGIONS.end())
+                {
+                    info.region = o;
+                }
                 // unlicensed
-                if(o == "Unl")
+                else if(o == "Unl")
                 {
                     info.edition = "Unlicensed";
                     info.disc_serial.clear();
@@ -524,92 +536,127 @@ void submission(const Options &o, const filesystem::path &p, void *data)
 
         SubmissionInfo info;
 
+        filesystem::path data_track_path;
+
         cout << "\tchecksums calculation... " << flush;
         list<DAT::Game::Rom> roms;
-        bool first_data_track = true;
         for(auto const &f : cue_files)
         {
-            roms.emplace_back(create_file_entry(p.parent_path(), f, info, first_data_track));
-            first_data_track = false;
+            bool data_track = ImageBrowser::IsDataTrack(p.parent_path() / f);
+            if(data_track)
+            {
+                if(!data_track_path.empty())
+                    throw_line("multiple data tracks unsupported");
+                data_track_path = p.parent_path() / f;
+            }
+            roms.emplace_back(create_file_entry(p.parent_path(), f, info, data_track));
         }
         cout << "done" << endl;
 
-        // data track filesystem routines
-        filesystem::path data_track(p.parent_path() / roms.front().name);
-        ImageBrowser browser(data_track);
+        DiscSystem disc_system = data_track_path.empty() ? DiscSystem::AUDIO : DiscSystem::DATA;
 
-        // PVD
-        auto pvd = browser.GetPVD();
-        info.pvd = hexdump((uint8_t *)&pvd, 0x320, 96);
-
-        // exe path/date and disc system detection
-        string exe_path = psx::extract_exe_path(browser);
-        auto exe_file = browser.RootDirectory()->SubEntry(exe_path);
-
-        DiscSystem disc_system(exe_file ? DiscSystem::PSX : DiscSystem::PC);
-
-        switch(disc_system)
+        // audio
+        if(disc_system == DiscSystem::AUDIO)
         {
-        case DiscSystem::PSX:
-        {
-            info.system = "Sony PlayStation";
-            info.copy_protection.clear();
-            info.exe_date = exe_file->Date();
-
-            // serial
-            string serial = psx::extract_serial(browser);
-            if(serial.empty())
-                info.comments = exe_path;
-            else
-                info.disc_serial = serial;
-
-            // region
-            string region = psx::extract_region(browser);
-            if(!region.empty())
-                info.region = region;
-
-            // antimod
-            cout << "\tsearching for anti modchip string... " << flush;
-            {
-                stringstream ss;
-                psx::detect_anti_modchip_string(ss, browser);
-                string am_log(ss.str());
-                if(am_log.empty())
-                    am_log = "No";
-
-                info.antimod = am_log;
-            }
-            cout << "done" << endl;
-
-            // libcrypt
-            if(region == "Europe")
-            {
-                auto sub_file_path(filesystem::path(basename + ".sub"));
-                if(filesystem::exists(sub_file_path))
-                {
-                    stringstream ss;
-                    psx::detect_libcrypt(ss, sub_file_path, filesystem::path(basename + ".sbi"));
-                    string lc_log(ss.str());
-                    if(lc_log.empty())
-                        lc_log = "No";
-
-                    info.libcrypt = lc_log;
-                }
-            }
-            else
-                info.libcrypt = "No";
-        }
-        break;
-
-        case DiscSystem::PC:
-            info.system = "IBM PC Compatible";
-            info.comments = "[T:ISBN] (Optional)";
+            info.system = "Audio CD";
+            info.languages.clear();
             info.exe_date.clear();
             info.edc.clear();
+            info.error_count.clear();
+            info.pvd.clear();
+            info.copy_protection.clear();
             info.antimod.clear();
             info.libcrypt.clear();
-            break;
         }
+        // data
+        else if(disc_system == DiscSystem::DATA)
+        {
+            // data track filesystem routines
+            filesystem::path data_track(data_track_path);
+            ImageBrowser browser(data_track);
+
+            // PVD
+            auto pvd = browser.GetPVD();
+            info.pvd = hexdump((uint8_t *)&pvd, 0x320, 96);
+
+            // exe path/date and disc system detection
+            string exe_path = psx::extract_exe_path(browser);
+            auto exe_file = browser.RootDirectory()->SubEntry(exe_path);
+
+            disc_system = (exe_file ? DiscSystem::PSX : DiscSystem::PC);
+
+            switch(disc_system)
+            {
+            case DiscSystem::DATA:
+                ;
+                break;
+
+            case DiscSystem::PSX:
+            {
+                info.system = "Sony PlayStation";
+                info.copy_protection.clear();
+                info.exe_date = exe_file->Date();
+
+                // serial
+                string serial = psx::extract_serial(browser);
+                if(serial.empty())
+                    info.comments = exe_path;
+                else
+                    info.disc_serial = serial;
+
+                // region
+                string region = psx::extract_region(browser);
+                if(!region.empty())
+                    info.region = region;
+
+                // antimod
+                cout << "\tsearching for anti modchip string... " << flush;
+                {
+                    stringstream ss;
+                    psx::detect_anti_modchip_string(ss, browser);
+                    string am_log(ss.str());
+                    if(am_log.empty())
+                        am_log = "No";
+
+                    info.antimod = am_log;
+                }
+                cout << "done" << endl;
+
+                // libcrypt
+                if(region == "Europe")
+                {
+                    auto sub_file_path(filesystem::path(basename + ".sub"));
+                    if(filesystem::exists(sub_file_path))
+                    {
+                        stringstream ss;
+                        psx::detect_libcrypt(ss, sub_file_path, filesystem::path(basename + ".sbi"));
+                        string lc_log(ss.str());
+                        if(lc_log.empty())
+                            lc_log = "No";
+
+                        info.libcrypt = lc_log;
+                    }
+                }
+                else
+                    info.libcrypt = "No";
+            }
+            break;
+
+            case DiscSystem::PC:
+                info.system = "IBM PC Compatible";
+                info.comments = "[T:ISBN] (Optional)";
+                info.exe_date.clear();
+                info.edc.clear();
+                info.antimod.clear();
+                info.libcrypt.clear();
+                break;
+            }
+        }
+        else
+        {
+            throw_line("unknown system type");
+        }
+
 
         // DAT
         //FIXME: use tinyxml?

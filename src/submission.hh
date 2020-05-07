@@ -12,6 +12,8 @@ namespace redump_info
 
 enum class DiscSystem
 {
+    AUDIO,
+    DATA,
     PC,
     PSX
 };
