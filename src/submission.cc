@@ -487,7 +487,7 @@ void update_info_from_dat(SubmissionInfo &info, const DAT::Game &g)
                 else if(!o.find("Demo") || !o.find("Beta"))
                     info.edition = o;
                 // version
-                else if(o == "Alt" || !o.find("Rev"))
+                else if(o == "Alt" || !o.find("Rev") || o == "EDC" || o == "No EDC")
                     info.version = o;
             }
         }
@@ -582,7 +582,6 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             // exe path/date and disc system detection
             string exe_path = psx::extract_exe_path(browser);
             auto exe_file = browser.RootDirectory()->SubEntry(exe_path);
-
             disc_system = (exe_file ? DiscSystem::PSX : DiscSystem::PC);
 
             switch(disc_system)
