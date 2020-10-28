@@ -286,20 +286,9 @@ uint32_t ImageBrowser::Entry::SectorSize() const
 }
 
 
-std::string ImageBrowser::Entry::Date() const
+time_t ImageBrowser::Entry::DateTime() const
 {
-    // Chrono Cross (USA) (Disc 1)
-    uint32_t year = _directory_record.recording_date_time.year;
-    if(year >= 0 && year <= 20)
-        year += 100;
-
-    std::stringstream ss;
-    ss << std::setfill('0');
-    ss << std::setw(4) << year + 1900 << '-'
-       << std::setw(2) << (uint32_t)_directory_record.recording_date_time.month << '-'
-       << std::setw(2) << (uint32_t)_directory_record.recording_date_time.day;
-
-    return ss.str();
+    return convert_time(_directory_record.recording_date_time);
 }
 
 

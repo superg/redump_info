@@ -2,6 +2,7 @@
 
 
 
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <queue>
@@ -27,7 +28,7 @@ public:
 		std::shared_ptr<Entry> SubEntry(const std::filesystem::path &path);
 		const std::string &Name() const;
 		uint32_t Version() const;
-		std::string Date() const;
+		time_t DateTime() const;
 		std::vector<uint8_t> Read(bool form2 = false, bool throw_on_error = false);
 		bool IsDummy() const;
 		bool IsInterleaved() const;

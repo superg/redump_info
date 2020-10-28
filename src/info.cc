@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <ctime>
 #include <filesystem>
 #include <iostream>
 #include <regex>
@@ -86,8 +87,11 @@ void info(const Options &o, const std::filesystem::path &f, void *)
 	{
 		ImageBrowser browser(f);
 
-		if(!o.batch)
-			cout << f.generic_string() << ": " << endl;
+		cout << f.generic_string();
+		if(o.batch)
+			cout << ",";
+		else
+			cout << ": " << endl;
 
 		if(o.start_msf)
 		{
@@ -110,15 +114,53 @@ void info(const Options &o, const std::filesystem::path &f, void *)
 			cout << (mode2form2_edc_fast(f) ? "Yes" : "No") << endl;
 		}
 
+		if(o.pvd_time)
+		{
+			auto &pvd = browser.GetPVD();
+
+			time_t time_newest = iso9660::convert_time(pvd.primary.volume_creation_date_time);
+			/*
+			// DEBUG
+			{
+				char buffer[32];
+				strftime(buffer, 32, "%Y-%m-%d", localtime(&time_newest));
+				cout << "[PVD]: " << buffer << endl;
+			}
+			*/
+			browser.Iterate([&](const std::string &path, std::shared_ptr<ImageBrowser::Entry> d)
+			{
+				bool exit = false;
+
+				time_t file_time = d->DateTime();
+				/*
+				// DEBUG
+				{
+					auto fp((path.empty() ? "" : path + "/") + d->Name());
+
+					char buffer[32];
+					strftime(buffer, 32, "%Y-%m-%d", localtime(&file_time));
+					cout << fp << ": " << buffer << endl;
+				}
+				*/
+				if(file_time > time_newest)
+					time_newest = file_time;
+
+				return exit;
+			});
+
+			{
+				char buffer[32];
+//				strftime(buffer, 32, "%Y-%m-%d %H:%M:%S", localtime(&time_newest));
+				strftime(buffer, 32, "%Y-%m-%d", localtime(&time_newest));
+				cout << buffer << endl;
+			}
+
+//			cout << "";
+		}
+
 		if(o.launcher)
 		{
 			string launcher = psx::extract_exe_path(browser);
-
-			//DEBUG
-			if(launcher.empty())
-			{
-				cout << "GGG" << endl;
-			}
 
 			if(!o.batch)
 				cout << "\tLauncher: ";
@@ -129,19 +171,27 @@ void info(const Options &o, const std::filesystem::path &f, void *)
 		{
 			string serial = psx::extract_serial(browser);
 
-			//DEBUG
-			if(serial.empty())
-			{
-				string launcher = psx::extract_exe_path(browser);
-				if(launcher.find(".EXE") == string::npos)
-				{
-					cout << "GGG" << endl;
-				}
-			}
-
 			if(!o.batch)
 				cout << "\tSerial: ";
 			cout << (serial.empty() ? "<unavailable>" : serial) << endl;
+		}
+
+		if(o.system_area)
+		{
+			//TODO
+		}
+
+		if(o.antimod)
+		{
+			auto entries = psx::detect_anti_modchip_string(browser);
+			if(!entries.empty())
+			{
+				if(!o.batch)
+					cout << "\tAnti-Modchip: " << endl;
+
+				for(auto const &e : entries)
+					cout << "\t\t" << e << endl;
+			}
 		}
 	}
 	catch(const std::exception &e)

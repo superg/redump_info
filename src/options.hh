@@ -40,11 +40,15 @@ struct Options
             bool start_msf;
             bool sector_size;
             bool edc;
+            bool pvd_time;
+
+            // PSX
             bool launcher;
             bool serial;
             bool system_area;
+            bool antimod;
         };
-        bool info[6];
+        bool info[8];
     };
     bool batch;
 

@@ -481,7 +481,6 @@ void update_info_from_dat(SubmissionInfo &info, const DAT::Game &g)
                 else if(o == "Unl")
                 {
                     info.edition = "Unlicensed";
-                    info.disc_serial.clear();
                 }
                 // edition
                 else if(!o.find("Demo") || !o.find("Beta"))
@@ -594,14 +593,21 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             {
                 info.system = "Sony PlayStation";
                 info.copy_protection.clear();
-                info.exe_date = exe_file->Date();
+
+                {
+                    time_t t = exe_file->DateTime();
+                    char buffer[32];
+                    strftime(buffer, 32, "%Y-%m-%d", localtime(&t));
+                    info.exe_date = buffer;
+                }
 
                 // serial
                 string serial = psx::extract_serial(browser);
                 if(serial.empty())
-                    info.comments = exe_path;
+                    info.comments = "Launcher Executable: " + exe_path;
                 else
-                    info.disc_serial = serial;
+                    info.comments = "Internal Serial: " + serial;
+//                    info.disc_serial = serial;
 
                 // region
                 string region = psx::extract_region(browser);
@@ -611,8 +617,10 @@ void submission(const Options &o, const filesystem::path &p, void *data)
                 // antimod
                 cout << "\tsearching for anti modchip string... " << flush;
                 {
+                    auto entries = psx::detect_anti_modchip_string(browser);
                     stringstream ss;
-                    psx::detect_anti_modchip_string(ss, browser);
+                    for(auto const &e : entries)
+                        ss << e << endl;
                     string am_log(ss.str());
                     if(am_log.empty())
                         am_log = "No";

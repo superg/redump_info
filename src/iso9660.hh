@@ -3,6 +3,7 @@
 
 
 #include <cstdint>
+#include <ctime>
 
 
 
@@ -19,6 +20,17 @@ struct uint32_lsb_msb
 {
 	uint16_t lsb;
 	uint16_t msb;
+};
+
+struct RecordingDateTime
+{
+	uint8_t year;
+	uint8_t month;
+	uint8_t day;
+	uint8_t hour;
+	uint8_t minute;
+	uint8_t second;
+	uint8_t gmt_offset;
 };
 
 struct DirectoryRecord
@@ -39,21 +51,24 @@ struct DirectoryRecord
 	uint8_t xa_length;
 	uint64_lsb_msb offset;
 	uint64_lsb_msb data_length;
-	struct RecordingDateTime
-	{
-		uint8_t year;
-		uint8_t month;
-		uint8_t day;
-		uint8_t hour;
-		uint8_t minute;
-		uint8_t second;
-		uint8_t gmt_offset;
-	} recording_date_time;
+	RecordingDateTime recording_date_time;
 	uint8_t file_flags;
 	uint8_t file_unit_size;
 	uint8_t interleave_gap_size;
 	uint32_t volume_sequence_number;
 	uint8_t file_identifier_length;
+};
+
+struct DateTime
+{
+	uint8_t year[4];
+	uint8_t month[2];
+	uint8_t day[2];
+	uint8_t hour[2];
+	uint8_t minute[2];
+	uint8_t second[2];
+	uint8_t centisecond[2];
+	int8_t gmt_offset;
 };
 
 struct VolumeDescriptor
@@ -99,17 +114,7 @@ struct VolumeDescriptor
 			char copyright_file_identifier[37];
 			char abstract_file_identifier[37];
 			char bibliographic_file_identifier[37];
-			struct DateTime
-			{
-				uint8_t year[4];
-				uint8_t month[2];
-				uint8_t day[2];
-				uint8_t hour[2];
-				uint8_t minute[2];
-				uint8_t second[2];
-				uint8_t centisecond[2];
-				uint8_t gmt_offset;
-			} volume_creation_date_time;
+			DateTime volume_creation_date_time;
 			DateTime volume_modification_date_time;
 			DateTime volume_expiration_date_time;
 			DateTime volume_effective_date_time;
@@ -140,5 +145,8 @@ enum class Characters : char
 
 extern const uint32_t SYSTEM_AREA_SIZE;
 extern const uint8_t STANDARD_INDENTIFIER[];
+
+time_t convert_time(const DateTime &date_time);
+time_t convert_time(const RecordingDateTime &date_time);
 
 }

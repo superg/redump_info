@@ -86,10 +86,9 @@ std::string extract_serial(ImageBrowser &browser)
 {
     auto p = extract_serial_pair(browser);
     
-    //FIXME: region and dash
     std::string serial;
     if(!p.first.empty() || !p.second.empty())
-        serial = p.first + (detect_region(p.first) == "Japan" ?  " " : "-") + p.second;
+        serial = p.first + "-" + p.second;
 
     return serial;
 }
@@ -100,8 +99,8 @@ std::string detect_region(const std::string &prefix)
     std::string region;
 
     const std::set<std::string> REGION_J {"ESPM", "PAPX", "PCPX", "PDPX", "SCPM", "SCPS", "SCZS", "SIPS", "SLKA", "SLPM", "SLPS"};
-    const std::set<std::string> REGION_U {"LSP", "SCUS", "SLUS", "SLUSP"};
-    const std::set<std::string> REGION_E {"SCED", "SCES", "SLED", "SLES"};
+    const std::set<std::string> REGION_U {"LSP", "PEPX", "SCUS", "SLUS", "SLUSP"};
+    const std::set<std::string> REGION_E {"PUPX", "SCED", "SCES", "SLED", "SLES"};
     // multi: "DTL", "PBPX"
 
     if(REGION_J.find(prefix) != REGION_J.end())
@@ -121,8 +120,10 @@ std::string extract_region(ImageBrowser &browser)
 }
 
 
-void detect_anti_modchip_string(std::ostream &os, ImageBrowser &browser)
+std::vector<std::string> detect_anti_modchip_string(ImageBrowser &browser)
 {
+    std::vector<std::string> entries;
+
 	// taken from DIC
 	const char ANTIMOD_MESSAGE_EN[] = "     SOFTWARE TERMINATED\nCONSOLE MAY HAVE BEEN MODIFIED\n     CALL 1-888-780-7690";
 	// string is encoded with Shift JIS
@@ -147,15 +148,25 @@ void detect_anti_modchip_string(std::ostream &os, ImageBrowser &browser)
 			auto data = d->Read(false, false);
 
 			auto it_en = search(data.begin(), data.end(), std::begin(ANTIMOD_MESSAGE_EN), std::end(ANTIMOD_MESSAGE_EN));
-			if(it_en != data.end())
-				os << fp << " @ 0x" << std::hex << it_en - data.begin() << std::dec << ": EN" << std::endl;
+            if(it_en != data.end())
+            {
+                std::stringstream ss;
+                ss << fp << " @ 0x" << std::hex << it_en - data.begin() << ": EN";
+                entries.emplace_back(ss.str());
+            }
 			auto it_jp = search(data.begin(), data.end(), std::begin(ANTIMOD_MESSAGE_JP), std::end(ANTIMOD_MESSAGE_JP));
-			if(it_jp != data.end())
-				os << fp << " @ 0x" << std::hex << it_jp - data.begin() << std::dec << ": JP" << std::endl;
+            if(it_jp != data.end())
+            {
+                std::stringstream ss;
+                ss << fp << " @ 0x" << std::hex << it_jp - data.begin() << ": JP";
+                entries.emplace_back(ss.str());
+            }
 		}
 
 		return exit;
 	});
+
+    return entries;
 }
 
 

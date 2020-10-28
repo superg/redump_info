@@ -71,12 +71,19 @@ Options::Options(int argc, const char *argv[])
                     sector_size = true;
                 else if(key == "--edc")
                     edc = true;
-                else if(key == "--serial")
-                    serial = true;
+                else if(key == "--pvd-time")
+                    pvd_time = true;
+
+                // info PSX
                 else if(key == "--launcher")
                     launcher = true;
+                else if(key == "--serial")
+                    serial = true;
                 else if(key == "--system-area")
                     system_area = true;
+                else if(key == "--antimod")
+                    antimod = true;
+
                 else if(key == "--batch")
                     batch = true;
 
@@ -211,10 +218,15 @@ void Options::PrintUsage(std::ostream &os)
     os << "info options: " << std::endl;
     os << "\t--start-msf\tprint start MSF address" << std::endl;
     os << "\t--sector-size\tprint sector size" << std::endl;
-    os << "\t--edc\t\tprint print EDC information (PSX)" << std::endl;
+    os << "\t--edc\t\tprint EDC information" << std::endl;
+    os << "\t--pvd-time\t\tprint PVD creation date/time" << std::endl;
+
+    // PSX
+    os << "\t--launcher\tprint startup executable path (PSX)" << std::endl;
     os << "\t--serial\tprint print disc serial (PSX)" << std::endl;
-    os << "\t--launcher\tprint startup executable path" << std::endl;
-//    os << "\t--system-area\tprint system area information (PSX)" << std::endl;
+    os << "\t--system-area\tprint system area information (PSX)" << std::endl;
+    os << "\t--antimod\tprint antimod string locations (PSX)" << std::endl;
+
     os << "\t--batch\t\tbatch mode, supress formatted output" << std::endl;
     os << std::endl;
 
