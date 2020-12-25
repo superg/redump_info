@@ -167,7 +167,7 @@ void info(const Options &o, const std::filesystem::path &f, void *)
 								uint32_t sector_offset = d->_directory_record.offset.lsb;
 								uint32_t sector_size = d->SectorSize();
 
-								std::cout << d->Name()
+								std::cout << path + "/" + d->Name()
 									<< ", sector offset: " << sector_offset
 									<< ", sector size: " << sector_size
 									<< " [0x" << std::hex << std::setfill('0') << sector_offset * sizeof(cdrom::Sector) << std::setfill(' ') << std::dec
