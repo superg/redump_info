@@ -41,6 +41,7 @@ struct Options
             bool sector_size;
             bool edc;
             bool pvd_time;
+            bool file_offsets;
 
             // PSX
             bool launcher;
@@ -48,7 +49,7 @@ struct Options
             bool system_area;
             bool antimod;
         };
-        bool info[8];
+        bool info[9];
     };
     bool batch;
 

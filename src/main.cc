@@ -19,8 +19,6 @@ using namespace redump_info;
 
 void recursive_process(void (*callback)(const Options &, const std::filesystem::path &, void *), void *callback_data, const Options &options, const std::string &extension)
 {
-    string ext("." + str_lowercase(extension));
-
     for(auto const &p : options.positional)
     {
         if(!filesystem::exists(p))
@@ -41,7 +39,7 @@ void recursive_process(void (*callback)(const Options &, const std::filesystem::
                     continue;
 
                 // silently filter by extension
-                if(str_lowercase(it.path().extension().generic_string()) != ext)
+                if(!extension.empty() && str_lowercase(it.path().extension().generic_string()) != extension)
                     continue;
 
                 callback(options, it.path(), callback_data);
@@ -87,7 +85,7 @@ int main(int argc, char *argv[])
                     for(uint32_t i = 0; i < dim(options.info); ++i)
                         options.info[i] = true;
 
-                recursive_process(info, nullptr, options, str_lowercase(options.extension));
+                recursive_process(info, nullptr, options, "." + str_lowercase(options.extension));
             }
             else if(options.mode == Options::Mode::SUBMISSION)
             {
@@ -96,7 +94,7 @@ int main(int argc, char *argv[])
                 if(filesystem::exists(options.dat_path))
                     dat = make_unique<DAT>(options.dat_path);
 
-                recursive_process(submission, dat.get(), options, "cue");
+                recursive_process(submission, dat.get(), options, ".cue");
             }
             else
             {

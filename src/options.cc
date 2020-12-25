@@ -73,6 +73,8 @@ Options::Options(int argc, const char *argv[])
                     edc = true;
                 else if(key == "--pvd-time")
                     pvd_time = true;
+                else if(key == "--file-offsets")
+                    file_offsets = true;
 
                 // info PSX
                 else if(key == "--launcher")
@@ -220,6 +222,7 @@ void Options::PrintUsage(std::ostream &os)
     os << "\t--sector-size\tprint sector size" << std::endl;
     os << "\t--edc\t\tprint EDC information" << std::endl;
     os << "\t--pvd-time\t\tprint PVD creation date/time" << std::endl;
+    os << "\t--file-offsets\t\tprint ISO9660 file offsets" << std::endl;
 
     // PSX
     os << "\t--launcher\tprint startup executable path (PSX)" << std::endl;

@@ -122,40 +122,60 @@ void info(const Options &o, const std::filesystem::path &f, void *)
 			/*
 			// DEBUG
 			{
-				char buffer[32];
-				strftime(buffer, 32, "%Y-%m-%d", localtime(&time_newest));
-				cout << "[PVD]: " << buffer << endl;
+			char buffer[32];
+			strftime(buffer, 32, "%Y-%m-%d", localtime(&time_newest));
+			cout << "[PVD]: " << buffer << endl;
 			}
 			*/
 			browser.Iterate([&](const std::string &path, std::shared_ptr<ImageBrowser::Entry> d)
-			{
-				bool exit = false;
+							{
+								bool exit = false;
 
-				time_t file_time = d->DateTime();
-				/*
-				// DEBUG
-				{
-					auto fp((path.empty() ? "" : path + "/") + d->Name());
+								time_t file_time = d->DateTime();
+								/*
+								// DEBUG
+								{
+								auto fp((path.empty() ? "" : path + "/") + d->Name());
 
-					char buffer[32];
-					strftime(buffer, 32, "%Y-%m-%d", localtime(&file_time));
-					cout << fp << ": " << buffer << endl;
-				}
-				*/
-				if(file_time > time_newest)
-					time_newest = file_time;
+								char buffer[32];
+								strftime(buffer, 32, "%Y-%m-%d", localtime(&file_time));
+								cout << fp << ": " << buffer << endl;
+								}
+								*/
+								if(file_time > time_newest)
+									time_newest = file_time;
 
-				return exit;
-			});
+								return exit;
+							});
 
 			{
 				char buffer[32];
-//				strftime(buffer, 32, "%Y-%m-%d %H:%M:%S", localtime(&time_newest));
+				//				strftime(buffer, 32, "%Y-%m-%d %H:%M:%S", localtime(&time_newest));
 				strftime(buffer, 32, "%Y-%m-%d", localtime(&time_newest));
 				cout << buffer << endl;
 			}
 
-//			cout << "";
+			//			cout << "";
+		}
+
+		if(o.file_offsets)
+		{
+			browser.Iterate([&](const std::string &path, std::shared_ptr<ImageBrowser::Entry> d)
+							{
+								bool exit = false;
+
+								uint32_t sector_offset = d->_directory_record.offset.lsb;
+								uint32_t sector_size = d->SectorSize();
+
+								std::cout << d->Name()
+									<< ", sector offset: " << sector_offset
+									<< ", sector size: " << sector_size
+									<< " [0x" << std::hex << std::setfill('0') << sector_offset * sizeof(cdrom::Sector) << std::setfill(' ') << std::dec
+									<< ", " << sector_size * sizeof(cdrom::Sector) << "]"
+									<< std::endl;
+								
+								return exit;
+							});
 		}
 
 		if(o.launcher)

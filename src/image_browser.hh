@@ -38,11 +38,10 @@ public:
 //		std::vector<uint8_t> Read(std::set<uint8_t> *xa_channels = NULL);
 //		std::vector<uint8_t> ReadXA(uint8_t channel);
 
-	private:
+		iso9660::DirectoryRecord _directory_record;
 		ImageBrowser &_browser;
 		std::string _name;
 		uint32_t _version;
-		iso9660::DirectoryRecord _directory_record;
 
 		Entry(ImageBrowser &browser, const std::string &name, uint32_t version, const iso9660::DirectoryRecord &directory_record);
 
