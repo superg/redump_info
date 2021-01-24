@@ -88,6 +88,7 @@ public:
 private:
 	std::ifstream _ifs;
 	iso9660::VolumeDescriptor _pvd;
+	uint32_t _trackOffset;
 	uint32_t _trackSize;
 };
 

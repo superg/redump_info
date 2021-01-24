@@ -97,6 +97,12 @@ ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
     if(size < ((uint64_t)iso9660::SYSTEM_AREA_SIZE + 1) * sizeof(cdrom::Sector))
         throw_line("file is too small");
 
+    cdrom::Sector sector;
+
+    // calculate data track sector offset
+    _ifs.read((char *)&sector, sizeof(sector));
+    _trackOffset = msf_to_lba(sector.header.address) - msf_to_lba(cdrom::Sector::Header::Address{0, 2, 0});
+
 	// skip system area
 	_ifs.seekg(iso9660::SYSTEM_AREA_SIZE * sizeof(cdrom::Sector));
     if(_ifs.fail())
@@ -106,7 +112,6 @@ ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
 	iso9660::VolumeDescriptor *pvd = nullptr;
 	for(;;)
 	{
-		cdrom::Sector sector;
 		_ifs.read((char *)&sector, sizeof(sector));
         if(_ifs.fail())
             break;
@@ -275,7 +280,8 @@ uint32_t ImageBrowser::Entry::Version() const
 
 bool ImageBrowser::Entry::IsDummy() const
 {
-    return _directory_record.offset.lsb + SectorSize() >= _browser._trackSize || _directory_record.offset.lsb >= _browser._trackSize;
+    uint32_t offset = _directory_record.offset.lsb - _browser._trackOffset;
+    return offset + SectorSize() >= _browser._trackSize || offset >= _browser._trackSize;
 }
 
 
@@ -299,7 +305,8 @@ std::vector<uint8_t> ImageBrowser::Entry::Read(bool form2, bool throw_on_error)
     uint32_t size = _directory_record.data_length.lsb;
     data.reserve(size);
 
-    _browser._ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
+    uint32_t offset = _directory_record.offset.lsb - _browser._trackOffset;
+    _browser._ifs.seekg(offset * sizeof(cdrom::Sector));
     if(_browser._ifs.fail())
     {
         _browser._ifs.clear();
@@ -371,7 +378,8 @@ bool ImageBrowser::Entry::IsInterleaved() const
 
     static const uint32_t SECTORS_TO_ANALYZE = 8 * 4;
 
-    _browser._ifs.seekg(_directory_record.offset.lsb * sizeof(cdrom::Sector));
+    uint32_t offset = _directory_record.offset.lsb - _browser._trackOffset;
+    _browser._ifs.seekg(offset * sizeof(cdrom::Sector));
     if(_browser._ifs.fail())
     {
         _browser._ifs.clear();
