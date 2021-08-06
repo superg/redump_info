@@ -621,7 +621,7 @@ void submission(const Options &o, const filesystem::path &p, void *data)
                 if(serial.empty())
                     info.comments = "Launcher Executable: " + exe_path;
                 else
-                    info.comments = "Internal Serial: " + serial;
+                    info.comments = "[T:ISN] " + serial;
 //                    info.disc_serial = serial;
 
                 // region
