@@ -34,7 +34,8 @@ void recursive_process(void (*callback)(const Options &, const std::filesystem::
         {
             if(options.recursive)
             {
-                for(auto const &it : filesystem::recursive_directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+                for(auto const &it : filesystem::recursive_directory_iterator(p))
+
                 {
                     // skip anything other than regular file
                     if(!it.is_regular_file())
@@ -49,7 +50,7 @@ void recursive_process(void (*callback)(const Options &, const std::filesystem::
             }
             else
             {
-                for(auto const &it : filesystem::directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+                for(auto const &it : filesystem::directory_iterator(p))
                 {
                     // skip anything other than regular file
                     if(!it.is_regular_file())
@@ -131,5 +132,5 @@ int main(int argc, char *argv[])
         exit_code = 2;
     }
 
-    return exit_code;
+    ;    return exit_code;
 }

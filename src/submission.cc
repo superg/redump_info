@@ -651,7 +651,7 @@ void submission(const Options &o, const filesystem::path &p, void *data)
                     if(filesystem::exists(sub_file_path))
                     {
                         stringstream ss;
-                        psx::detect_libcrypt(ss, sub_file_path, filesystem::path(basename + ".sbi"));
+                        psx::detect_libcrypt_redumper(ss, sub_file_path, filesystem::path(basename + ".sbi"));
                         string lc_log(ss.str());
                         if(lc_log.empty())
                             lc_log = "No";
@@ -705,8 +705,31 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             info.cuesheet = ss.str();
         }
 
+        // fetch write offset from redumper
+        if(filesystem::exists(filesystem::path(basename + ".log")))
+        {
+            filesystem::path redumper_log(basename + ".log");
+            ifstream ifs(redumper_log);
+            if(ifs.fail())
+                throw_line("unable to open redumper log file (" + redumper_log.generic_string() + ")");
+
+            string line;
+            while(getline(ifs, line))
+            {
+                trim(line);
+                if(line.rfind("disc write offset: ", 0) == 0)
+                {
+                    auto tokens = tokenize_quoted(line, ":");
+                    if(tokens.size() == 2)
+                    {
+                        trim(tokens[1]);
+                        info.write_offset = tokens[1];
+                    }
+                }
+            }
+        }
         // fetch write offset from DIC output
-        if(filesystem::exists(filesystem::path(basename + "_disc.txt")))
+        else if(filesystem::exists(filesystem::path(basename + "_disc.txt")))
         {
             filesystem::path dic_disc_file(basename + "_disc.txt");
             ifstream ifs(dic_disc_file);

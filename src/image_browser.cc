@@ -65,7 +65,8 @@ bool ImageBrowser::IsDataTrack(const std::filesystem::path &track)
             continue;
         }
 
-        if(memcmp(vd->standard_identifier, iso9660::STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)))
+        if(memcmp(vd->standard_identifier, iso9660::STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)) &&
+           memcmp(vd->standard_identifier, iso9660::CDI_STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)))
             break;
 
         if(vd->type == iso9660::VolumeDescriptor::Type::PRIMARY)
@@ -129,7 +130,8 @@ ImageBrowser::ImageBrowser(const std::filesystem::path &data_track)
             continue;
         }
 
-        if(memcmp(vd->standard_identifier, iso9660::STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)))
+        if(memcmp(vd->standard_identifier, iso9660::STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)) &&
+           memcmp(vd->standard_identifier, iso9660::CDI_STANDARD_INDENTIFIER, sizeof(vd->standard_identifier)))
             break;
 
 		if(vd->type == iso9660::VolumeDescriptor::Type::PRIMARY)
@@ -193,6 +195,7 @@ std::list<std::shared_ptr<ImageBrowser::Entry>> ImageBrowser::Entry::Entries()
 			if(dr.length && dr.length <= cdrom::FORM1_DATA_SIZE - i % cdrom::FORM1_DATA_SIZE)
 			{
                 // (1) [1/12/2020]: "All Star Racing 2 (Europe) (Track 1).bin"
+                // (4) [9/05/2021]: "All Star Racing 2 (USA) (Track 1).bin"
                 // (2) [1/21/2020]: "Aitakute... - Your Smiles in My Heart - Oroshitate no Diary - Introduction Disc (Japan) (Track 1).bin"
                 // (3) [1/21/2020]: "MLB 2005 (USA).bin"
                 // all these tracks have messed up directory records, (1) and (3) have garbage after valid entries, (2) has garbage before
@@ -200,8 +203,12 @@ std::list<std::shared_ptr<ImageBrowser::Entry>> ImageBrowser::Entry::Entries()
                 if(dr.offset.lsb != endian_swap(dr.offset.msb) || dr.data_length.lsb != endian_swap(dr.data_length.msb))
                 {
 #ifdef DIRECTORY_RECORD_WORKAROUNDS
-                    ++i;
-                    continue;
+                    //FIXME: doesn't work for (4)
+//                    ++i;
+//                    continue;
+                    // skip whole record
+                    break;
+
 #else
                     throw_line("garbage in directory record");
 #endif

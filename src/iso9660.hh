@@ -143,8 +143,9 @@ enum class Characters : char
 	SEPARATOR2 = ';'
 };
 
-extern const uint32_t SYSTEM_AREA_SIZE;
-extern const uint8_t STANDARD_INDENTIFIER[];
+constexpr uint32_t SYSTEM_AREA_SIZE = 0x10;
+constexpr uint8_t STANDARD_INDENTIFIER[] = "CD001";
+constexpr uint8_t CDI_STANDARD_INDENTIFIER[] = "CD-I ";
 
 time_t convert_time(const DateTime &date_time);
 time_t convert_time(const RecordingDateTime &date_time);

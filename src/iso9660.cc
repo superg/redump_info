@@ -11,10 +11,6 @@
 namespace iso9660
 {
 
-const uint32_t SYSTEM_AREA_SIZE = 0x10;
-const uint8_t STANDARD_INDENTIFIER[] = "CD001";
-
-
 int ascii_to_decimal(const uint8_t *data, std::size_t size)
 {
     int decimal = 0;

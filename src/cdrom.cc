@@ -1,3 +1,4 @@
+#include <climits>
 #include "cdrom.hh"
 
 
@@ -22,6 +23,20 @@ Sector::Header::Address lba_to_msf(uint32_t lba)
 	address.minute = bcd_encode(lba);
 
 	return address;
+}
+
+
+void subcode_extract_channel(uint8_t *subchannel, uint8_t *subcode, Subchannel name)
+{
+	for(uint32_t i = 0; i < 96; ++i)
+	{
+		uint8_t &sc = subchannel[i / CHAR_BIT];
+		uint8_t mask = 1 << (CHAR_BIT - 1 - i % 8);
+		if(subcode[i] & (1 << (uint8_t)name))
+			sc |= mask;
+		else
+			sc &= ~mask;
+	}
 }
 
 }

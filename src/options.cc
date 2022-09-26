@@ -217,7 +217,7 @@ void Options::PrintUsage(std::ostream &os)
     os << "general options: " << std::endl;
     os << "\t--help,-h\tprint help message" << std::endl;
     os << "\t--verbose,-V\tverbose output" << std::endl;
-    os << "\t--recursive,-R\t\t\tvisit subdirectories" << std::endl;
+    os << "\t--recursive,-R\trecursively process subdirectories" << std::endl;
     os << "\t--extension,-e\tdefault CD track extension [bin]" << std::endl;
     os << std::endl;
 

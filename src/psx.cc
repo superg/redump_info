@@ -2,6 +2,7 @@
 #include <regex>
 #include <set>
 #include <sstream>
+#include <vector>
 #include "common.hh"
 #include "crc16.hh"
 #include "endian.hh"
@@ -195,6 +196,100 @@ void detect_libcrypt(std::ostream &os, const std::filesystem::path &sub_file, co
 
         // skip R, S, T, U, V, W, P
         ifs.seekg(sizeof(cdrom::SubQ) * 7, std::ifstream::cur);
+
+        uint16_t crc_le = crc16_gsm(Q.raw, sizeof(Q.raw));
+        if(crc_le != endian_swap(Q.crc))
+        {
+            // construct expected Q
+            cdrom::SubQ Q_good(Q);
+            Q_good.toc.address = cdrom::lba_to_msf(i);
+            Q_good.toc.data_address = cdrom::lba_to_msf(i + 150);
+            Q_good.crc = endian_swap(crc16_gsm(Q_good.raw, sizeof(Q_good.raw)));
+
+            std::string lc_sector;
+            if(Q.toc.address.minute != Q_good.toc.address.minute && Q.toc.data_address.minute != Q_good.toc.data_address.minute &&
+               Q.toc.address.second == Q_good.toc.address.second && Q.toc.data_address.second == Q_good.toc.data_address.second &&
+               Q.toc.address.frame  == Q_good.toc.address.frame  && Q.toc.data_address.frame  == Q_good.toc.data_address.frame)
+                lc_sector = "MIN";
+            else if(Q.toc.address.minute == Q_good.toc.address.minute && Q.toc.data_address.minute == Q_good.toc.data_address.minute &&
+                    Q.toc.address.second != Q_good.toc.address.second && Q.toc.data_address.second != Q_good.toc.data_address.second &&
+                    Q.toc.address.frame  == Q_good.toc.address.frame  && Q.toc.data_address.frame  == Q_good.toc.data_address.frame)
+                lc_sector = "SEC";
+            else if(Q.toc.address.minute == Q_good.toc.address.minute && Q.toc.data_address.minute == Q_good.toc.data_address.minute &&
+                    Q.toc.address.second == Q_good.toc.address.second && Q.toc.data_address.second == Q_good.toc.data_address.second &&
+                    Q.toc.address.frame  != Q_good.toc.address.frame  && Q.toc.data_address.frame  != Q_good.toc.data_address.frame)
+                lc_sector = "FRM";
+            /*
+            else if(Q.toc.address.minute == Q_good.toc.address.minute && Q.toc.data_address.minute == Q_good.toc.data_address.minute &&
+            Q.toc.address.second == Q_good.toc.address.second && Q.toc.data_address.second == Q_good.toc.data_address.second &&
+            Q.toc.address.frame  == Q_good.toc.address.frame  && Q.toc.data_address.frame  == Q_good.toc.data_address.frame)
+            lc_sector = "CRC";
+            */
+
+            if(!lc_sector.empty())
+            {
+                uint16_t xor1 = endian_swap(Q_good.crc) ^ endian_swap(Q.crc);
+                uint16_t xor2 = crc_le ^ endian_swap(Q.crc);
+
+                // sector
+                os << std::setw(5) << msf_to_lba(Q_good.toc.data_address) << '\t';
+
+                os << std::setfill('0') << std::hex;
+
+                // MSF
+                os << std::setw(2) << (uint32_t)Q_good.toc.data_address.minute << ':'
+                    << std::setw(2) << (uint32_t)Q_good.toc.data_address.second << ':'
+                    << std::setw(2) << (uint32_t)Q_good.toc.data_address.frame  << '\t';
+
+                // raw
+                for(uint32_t j = 0; j < sizeof(Q.raw); ++j)
+                {
+                    os << std::setw(2) << (uint32_t)Q.raw[j] << ' ';
+                }
+                // raw crc
+                os << std::setw(2) << (Q.crc & 0xFF) << ' ' << std::setw(2) << (Q.crc >> 8) << '\t';
+
+                // mode
+                os << lc_sector << '\t';
+
+                // xor
+                os << std::setw(4) << xor1 << ' ' << std::setw(4) << xor2;
+
+                os << std::setfill(' ') << std::dec;
+                os << std::endl;
+            }
+
+            ofs.write((char *)&Q_good.toc.data_address, sizeof(Q_good.toc.data_address));
+            uint8_t p = 1;
+            ofs.write((char *)&p, sizeof(p));
+            ofs.write((char *)&Q.raw, sizeof(Q.raw));
+        }
+    }
+}
+
+
+void detect_libcrypt_redumper(std::ostream &os, const std::filesystem::path &sub_file, const std::filesystem::path &sbi_file)
+{
+    uint32_t file_size = (uint32_t)std::filesystem::file_size(sub_file);
+    if(file_size % 96)
+        throw_line("subchannel file is incomplete (" + sub_file.generic_string() + ")");
+
+    std::ifstream ifs(sub_file, std::ifstream::binary);
+    if(ifs.fail())
+        throw_line("unable to open subchannel file (" + sub_file.generic_string() + ")");
+
+    std::ofstream ofs(sbi_file, std::ifstream::binary);
+    if(ofs.fail())
+        throw_line("unable to create SBI file (" + sbi_file.generic_string() + ")");
+    ofs.write("SBI", 4);
+
+    std::vector<uint8_t> buffer(96);
+    for(uint32_t i = 0, n = file_size / 96; i < n; ++i)
+    {
+        ifs.read((char *)buffer.data(), buffer.size());
+
+        cdrom::SubQ Q;
+        subcode_extract_channel((uint8_t *)&Q, buffer.data(), cdrom::Subchannel::Q);
 
         uint16_t crc_le = crc16_gsm(Q.raw, sizeof(Q.raw));
         if(crc_le != endian_swap(Q.crc))

@@ -18,5 +18,6 @@ std::string detect_region(const std::string &prefix);
 std::string extract_region(ImageBrowser &browser);
 std::vector<std::string> detect_anti_modchip_string(ImageBrowser &browser);
 void detect_libcrypt(std::ostream &os, const std::filesystem::path &sub_file, const std::filesystem::path &sbi_file);
+void detect_libcrypt_redumper(std::ostream &os, const std::filesystem::path &sub_file, const std::filesystem::path &sbi_file);
 
 }

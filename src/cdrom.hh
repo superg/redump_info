@@ -93,6 +93,19 @@ enum class CDXAMode : uint8_t
 };
 
 
+enum class Subchannel : uint8_t
+{
+	P = 7,
+	Q = 6,
+	R = 5,
+	S = 4,
+	T = 3,
+	U = 2,
+	V = 1,
+	W = 0
+};
+
+
 struct SubQ
 {
     union
@@ -138,5 +151,7 @@ T bcd_encode(T value)
 
 uint32_t msf_to_lba(const Sector::Header::Address &msf);
 Sector::Header::Address lba_to_msf(uint32_t lba);
+void subcode_extract_channel(uint8_t *subchannel, uint8_t *subcode, Subchannel name);
+
 
 }
