@@ -36,20 +36,20 @@ struct Sector
 
 	union
 	{
-        struct Mode1
+        struct
         {
             uint8_t user_data[FORM1_DATA_SIZE];
             uint32_t edc;
             uint8_t intermediate[8];
             ECC ecc;
         } mode1;
-		struct Mode2
+		struct
 		{
 			union
 			{
 				uint8_t user_data[2336];
 
-				struct XA
+				struct
 				{
 					struct SubHeader
 					{
@@ -62,13 +62,13 @@ struct Sector
 
 					union
 					{
-						struct Form1
+						struct
 						{
 							uint8_t user_data[FORM1_DATA_SIZE];
 							uint32_t edc;
 							ECC ecc;
 						} form1;
-						struct Form2
+						struct
 						{
 							uint8_t user_data[FORM2_DATA_SIZE];
 							uint32_t edc; // reserved
@@ -102,7 +102,7 @@ struct SubQ
             uint8_t control_adr;
 
             // mode 1
-            struct TOC
+            struct
             {
                 uint8_t track_number;
                 uint8_t point;

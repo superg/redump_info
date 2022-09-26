@@ -30,6 +30,7 @@ struct Options
     // common
     bool help;
     bool verbose;
+    bool recursive;
     std::string extension;
 
     // info

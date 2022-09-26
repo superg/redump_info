@@ -20,6 +20,7 @@ Options::Options()
     // common
     , help(false)
     , verbose(false)
+    , recursive(false)
     , extension("bin")
     // info
     , batch(false)
@@ -61,6 +62,8 @@ Options::Options(int argc, const char *argv[])
                     help = true;
                 else if(key == "--verbose" || key == "-V")
                     verbose = true;
+                else if(key == "--recursive" || key == "-R")
+                    recursive = true;
                 else if(key == "--extension" || key == "-e")
                     o_value = &extension;
 
@@ -192,7 +195,7 @@ std::string Options::ModeString()
 
 void Options::PrintVersion(std::ostream &os)
 {
-    os << basename << " v" << RI_VERSION_MAJOR << "." << RI_VERSION_MINOR << " (" << XSTR(RI_TIMESTAMP) << ")" << std::endl;
+    os << basename << " v" << XSTR(RI_VERSION_MAJOR) << "." << XSTR(RI_VERSION_MINOR) << " (" << XSTR(RI_TIMESTAMP) << ")" << std::endl;
     os << std::endl;
 }
 
@@ -214,6 +217,7 @@ void Options::PrintUsage(std::ostream &os)
     os << "general options: " << std::endl;
     os << "\t--help,-h\tprint help message" << std::endl;
     os << "\t--verbose,-V\tverbose output" << std::endl;
+    os << "\t--recursive,-R\t\t\tvisit subdirectories" << std::endl;
     os << "\t--extension,-e\tdefault CD track extension [bin]" << std::endl;
     os << std::endl;
 

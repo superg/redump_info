@@ -32,17 +32,35 @@ void recursive_process(void (*callback)(const Options &, const std::filesystem::
         // recurse directory
         else if(filesystem::is_directory(p))
         {
-            for(auto const &it : filesystem::recursive_directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+            if(options.recursive)
             {
-                // skip anything other than regular file
-                if(!it.is_regular_file())
-                    continue;
+                for(auto const &it : filesystem::recursive_directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+                {
+                    // skip anything other than regular file
+                    if(!it.is_regular_file())
+                        continue;
 
-                // silently filter by extension
-                if(!extension.empty() && str_lowercase(it.path().extension().generic_string()) != extension)
-                    continue;
+                    // silently filter by extension
+                    if(!extension.empty() && str_lowercase(it.path().extension().generic_string()) != extension)
+                        continue;
 
-                callback(options, it.path(), callback_data);
+                    callback(options, it.path(), callback_data);
+                }
+            }
+            else
+            {
+                for(auto const &it : filesystem::directory_iterator(p, filesystem::directory_options::follow_directory_symlink))
+                {
+                    // skip anything other than regular file
+                    if(!it.is_regular_file())
+                        continue;
+
+                    // silently filter by extension
+                    if(!extension.empty() && str_lowercase(it.path().extension().generic_string()) != extension)
+                        continue;
+
+                    callback(options, it.path(), callback_data);
+                }
             }
         }
         else
