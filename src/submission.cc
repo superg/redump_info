@@ -559,9 +559,8 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             bool data_track = ImageBrowser::IsDataTrack(p.parent_path() / f);
             if(data_track)
             {
-                if(!data_track_path.empty())
-                    throw_line("multiple data tracks unsupported");
-                data_track_path = p.parent_path() / f;
+                if(data_track_path.empty())
+                    data_track_path = p.parent_path() / f;
             }
             roms.emplace_back(create_file_entry(p.parent_path(), f, info, data_track));
         }
