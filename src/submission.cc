@@ -600,6 +600,7 @@ void submission(const Options &o, const filesystem::path &p, void *data)
             switch(disc_system)
             {
             case DiscSystem::DATA:
+            case DiscSystem::AUDIO:
                 ;
                 break;
 
